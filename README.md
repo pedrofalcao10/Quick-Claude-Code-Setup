@@ -151,3 +151,10 @@ On first run, Claude will prompt you to log in with your Anthropic account.
 | `git` not found | Re-install Git and restart your terminal |
 | Wrong Git email | Run `git config --global user.email "correct@email.com"` |
 | Permission errors with `npm install -g` | Run PowerShell as Administrator |
+
+---
+
+## Optional: Compound Engineering Plugin
+
+Want a structured workflow for planning, reviewing, and retaining knowledge across projects?
+See [COMPOUND-ENGINEERING.md](./COMPOUND-ENGINEERING.md) for a quick guide.
