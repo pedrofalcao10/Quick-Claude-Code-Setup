@@ -78,7 +78,41 @@ pnpm --version
 
 ---
 
-## 4. Install Claude Code
+## 4. Install GitHub CLI (gh)
+
+The GitHub CLI lets Claude Code create pull requests, manage issues, and interact with GitHub directly from the terminal.
+
+**Option 1 — winget (recommended):**
+
+```powershell
+winget install --id GitHub.cli
+```
+
+**Option 2 — installer:** Download from 👉 https://cli.github.com and run with default options.
+
+After installing, verify it works:
+
+```powershell
+gh --version
+```
+
+### Authenticate with GitHub
+
+```powershell
+gh auth login
+```
+
+This will walk you through browser-based GitHub authentication. Once done, you can create PRs with `gh pr create`.
+
+Verify you are logged in:
+
+```powershell
+gh auth status
+```
+
+---
+
+## 5. Install Claude Code
 
 > Run in **PowerShell as administrator**:
 
@@ -93,7 +127,7 @@ npm install -g @anthropic-ai/claude-code
 
 ---
 
-## 5. Fix PowerShell Execution Policy (if needed)
+## 6. Fix PowerShell Execution Policy (if needed)
 
 On Windows, PowerShell may block `.ps1` scripts by default. If you see an `UnauthorizedAccess` error when running `claude`, fix it with:
 
@@ -107,7 +141,7 @@ This only needs to be done once.
 
 ---
 
-## 6. Add Claude to PATH (if needed)
+## 7. Add Claude to PATH (if needed)
 
 If `claude` is still not recognized after installation, you may need to add its install location to your PATH manually.
 
@@ -131,7 +165,7 @@ Then **restart PowerShell** for the change to take effect.
 
 ---
 
-## 7. Run Claude
+## 8. Run Claude
 
 ```powershell
 claude
@@ -145,8 +179,10 @@ On first run, Claude will prompt you to log in with your Anthropic account.
 
 | Problem | Fix |
 |---|---|
-| `claude` not found | Ensure the install bin folder is in your PATH (step 6) |
-| `UnauthorizedAccess` on `.ps1` | Run execution policy fix (step 5) |
+| `claude` not found | Ensure the install bin folder is in your PATH (step 7) |
+| `UnauthorizedAccess` on `.ps1` | Run execution policy fix (step 6) |
+| `gh` not found | Re-install GitHub CLI and restart your terminal |
+| `gh auth` fails | Try `gh auth login --web` or check your browser for the auth prompt |
 | `node` not found | Re-install Node.js and ensure "Add to PATH" was checked |
 | `git` not found | Re-install Git and restart your terminal |
 | Wrong Git email | Run `git config --global user.email "correct@email.com"` |
