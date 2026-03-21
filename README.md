@@ -90,7 +90,7 @@ winget install --id GitHub.cli
 
 **Option 2 — installer:** Download from 👉 https://cli.github.com and run with default options.
 
-After installing, verify it works:
+After installing, restart your terminal and verify it works:
 
 ```powershell
 gh --version
