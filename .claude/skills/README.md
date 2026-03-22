@@ -1,0 +1,157 @@
+# Claude Code Skills
+
+Three skills that form a complete engineering workflow: from identifying problems to shipping fixes.
+
+## Overview
+
+```
+/review-and-plan  -->  finds code issues  -->  creates MANY todos  -->  /solve-todo next
+/new-feature      -->  brainstorms idea   -->  creates ONE todo    -->  /solve-todo {NNN}
+/solve-todo       -->  resolves any todo through analysis -> plan -> implement -> review -> PR
+```
+
+## Skills
+
+### /review-and-plan
+
+**Purpose:** Reviews the codebase for issues, creates the `todos/` backlog architecture, generates todo files and a priority document, then hands off to `/solve-todo`.
+
+**When to use:** Starting a new project, beginning a review cycle, or auditing code for the first time.
+
+**Usage:**
+```
+/review-and-plan                    # review entire codebase
+/review-and-plan backend/           # review a specific path
+```
+
+**What it does:**
+1. Creates `todos/` directory structure (backlog, doing, done, priority)
+2. Runs a comprehensive code review (`/ce:review`)
+3. Generates individual todo files in `todos/backlog/`
+4. Generates a priority document with execution order and Quick Reference table
+5. Commits everything and offers to start `/solve-todo next`
+
+**Handles re-runs:** Detects existing findings and offers to keep, overwrite, or abort. Numbering never collides across review cycles.
+
+---
+
+### /new-feature
+
+**Purpose:** Takes a human-originated idea, problem, or necessity, runs an interactive brainstorm, creates a backlog item, and hands off to `/solve-todo`.
+
+**When to use:** You have a new feature idea, a user-reported problem, or a business requirement that doesn't come from code review.
+
+**Usage:**
+```
+/new-feature add WhatsApp notifications for low NPS scores
+/new-feature                        # will ask for description
+```
+
+**What it does:**
+1. Validates prerequisites (requires `todos/` architecture and a priority document to exist)
+2. Scans for overlapping existing backlog items
+3. Runs `/ce:brainstorm` interactively to shape the idea into concrete requirements
+4. Creates a todo file with `Source: Feature` and a link to the brainstorm doc
+5. Appends to the priority document (Execution Order + Quick Reference)
+6. Creates a GitHub issue with `feature` label
+7. Commits on `dev` branch and offers to start `/solve-todo {NNN}`
+
+**Exit path:** If the brainstorm concludes the idea shouldn't be built, stops cleanly with no artifacts created.
+
+**Prerequisite:** Run `/review-and-plan` at least once first to set up the `todos/` architecture.
+
+---
+
+### /solve-todo
+
+**Purpose:** Takes a single backlog item through the full implementation pipeline: analysis, planning, implementation, review, and PR creation.
+
+**When to use:** Resolving any item from the backlog, whether it came from `/review-and-plan` or `/new-feature`.
+
+**Usage:**
+```
+/solve-todo 002                     # work on a specific todo
+/solve-todo next                    # pick the next item from priority order
+```
+
+**What it does:**
+1. Pre-flight checks (input validation, clean working tree, existing branch/issue, dependencies)
+2. Creates a GitHub issue and feature branch from `dev`
+3. Moves todo to `todos/doing/` (status: DOING)
+4. **Analysis** — reads brainstorm doc if linked (from `/new-feature`), otherwise runs `/ce:ideate` + `/ce:brainstorm`
+5. **Plan** — runs `/ce:plan` for implementation strategy
+6. **Implementation** — runs `/ce:work` to write code
+7. **Review** — runs `/ce:review` (max 3 fix iterations)
+8. **Documentation** — runs `/ce:compound` (skipped for small items)
+9. Moves todo to `todos/done/`, creates PR targeting `dev`, closes the GitHub issue
+
+**Branch prefixes:** Automatically chosen based on todo source:
+- `fix/` — security or bug fixes
+- `refactor/` — architecture changes
+- `test/` — test coverage
+- `chore/` — cleanup
+- `feat/` — new features (Source: Feature)
+
+---
+
+## Typical Workflows
+
+### Starting fresh on a new codebase
+
+```
+/review-and-plan              # generates 28 todos + priority doc
+/solve-todo next              # starts fixing the first item
+/solve-todo next              # continues to the next item
+...
+```
+
+### Adding a new feature
+
+```
+/new-feature add email digest for weekly feedback summaries
+# interactive brainstorm -> todo created -> /solve-todo runs automatically
+```
+
+### Working through the backlog
+
+```
+/solve-todo next              # picks the highest-priority BACKLOG item
+/solve-todo 015               # or pick a specific one by number
+```
+
+### New review cycle (all previous items done)
+
+```
+/review-and-plan              # creates 001-priority-todos.md (next cycle)
+                              # todo numbering continues from where the last cycle ended
+```
+
+---
+
+## Shared Conventions
+
+| Convention | Format | Example |
+|-----------|--------|---------|
+| Todo file | `{NNN}-{pN}-{kebab-desc}.md` | `029-p2-whatsapp-notifications.md` |
+| Priority doc | `{NNN}-priority-todos.md` | `000-priority-todos.md` |
+| GitHub issue | `{PRIORITY}/{NNN} - {desc}` | `P2/029 - WhatsApp notifications` |
+| Branch | `{prefix}/{NNN}-{kebab-desc}` | `feat/029-whatsapp-notifications` |
+| PR title | `{prefix}: {PRIORITY}/{NNN} - {desc}` | `feat: P2/029 - WhatsApp notifications` |
+
+## Permissions (all skills)
+
+- **Freely allowed:** File reads, code search, tests, builds, lints, git read operations
+- **Requires approval:** File writes, git commits/push/checkout, GitHub issue/PR creation
+
+## Directory Structure
+
+```
+todos/
+  backlog/    # Items not yet started (BACKLOG)
+  doing/      # Items in progress (DOING)
+  done/       # Completed items (DONE)
+  priority/   # Priority documents, one per review cycle
+docs/
+  brainstorms/  # Requirements docs from /ce:brainstorm (used by /new-feature)
+  plans/        # Implementation plans from /ce:plan
+```

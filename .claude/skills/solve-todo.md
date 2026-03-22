@@ -1,0 +1,168 @@
+# solve-todo
+
+Executes the full workflow pipeline for resolving a backlog item from `todos/backlog/`.
+
+## Usage
+
+```
+/solve-todo <todo-number>
+/solve-todo next
+```
+
+- Pass a number (e.g., `001`) to work on a specific todo.
+- Pass `next` to pick the next item from the **Quick Reference** table at the bottom of the **latest priority file** in `todos/priority/` (the one with the highest number, e.g., `001-priority-todos.md` takes precedence over `000-priority-todos.md`). Scan rows top-to-bottom (by the `Order` column, which defines execution priority). The first row where the `Status` column is `BACKLOG` is the next item. Use the `#` column (todo number) to locate the file, **not** the `Order` column.
+
+## Permission Rules (apply to ALL phases)
+
+- **ALLOW without asking:** All file reads, grep/search, glob, git status/log/diff/branch, running tests (`go test`, `npm test`, `vitest`, `jest`, etc.), build commands, lint commands
+- **PAUSE and ask user approval for:** Any file creation, file edit, file deletion, git commits, git push, git checkout (branch switches), GitHub mutations (`gh issue create`, `gh pr create`)
+
+## Rejection & Retry Policy
+
+When the user rejects a phase's output (says "no", requests changes, or wants a different approach):
+
+1. Ask the user what they want changed.
+2. Re-run the **current phase** incorporating their feedback.
+3. Maximum **3 retries per phase**. After 3 rejections, ask: "Do you want to skip this phase, go back to a previous phase, or abort the pipeline?"
+
+## Workflow Pipeline
+
+Execute each phase **in strict order**. After each skill phase, pause and summarize the output before moving to the next.
+
+### Phase 0 — Setup
+
+**Pre-flight checks (run before anything else):**
+
+1. **Validate input:** If no argument was provided, ask the user for a todo number or `next`. If a number was given, verify the file `todos/backlog/{number}-*.md` exists. If the file is not found, check `todos/doing/` and `todos/done/` — if found there, report the item's current status and stop. If not found anywhere, report "todo not found" and stop.
+2. **Check working tree:** Run `git status --porcelain`. If there are uncommitted changes, warn the user and ask whether to stash, commit, or abort before continuing.
+3. **Check for existing branch:** Run `git branch --list 'fix/{NUMBER}-*' 'refactor/{NUMBER}-*' 'test/{NUMBER}-*' 'chore/{NUMBER}-*' 'feat/{NUMBER}-*'`. If a branch already exists for this todo (any prefix), ask the user: "A branch for this todo already exists. Switch to it and resume, or delete it and start fresh?"
+4. **Check for existing issue:** Run `gh issue list --search "{PRIORITY}/{NUMBER}" --state open`. If a matching issue already exists, reuse its number instead of creating a new one.
+5. **Check dependencies:** Read the **Quick Reference** table's Dependencies column for this todo. If any dependency is still `BACKLOG` or `DOING` (check their Status in the same table), warn: "Warning: #{DEP_NUMBER} ({dep description}) is not done yet. This todo depends on it. Continue anyway?" Let the user decide.
+
+**Main setup steps:**
+
+1. Read the todo file from `todos/backlog/{number}-*.md` to get all context.
+2. Read the priority file `the latest priority file in todos/priority/` to get the priority, order number, and short description for this todo.
+3. Extract from the todo file:
+   - `PRIORITY`: e.g., P1, P2, P3
+   - `NUMBER`: e.g., 001, 002
+   - `SHORT_DESC`: a very short (3-6 word) description from the todo title
+4. Determine branch prefix based on the todo's source/nature:
+   - Security or bug fix → `fix/`
+   - Architecture or refactoring → `refactor/`
+   - Test coverage → `test/`
+   - Cleanup or dead code removal → `chore/`
+   - New feature (Source: Feature) → `feat/`
+   - Default → `fix/`
+   - Branch name: `{prefix}/{NUMBER}-{kebab-case-short-desc}` (e.g., `fix/002-wildcard-cors`, `refactor/016-service-layer`, `feat/029-whatsapp-notifications`)
+5. Create a GitHub issue (skip if one already exists per pre-flight check 4):
+   - **Title:** `{PRIORITY}/{NUMBER} - {SHORT_DESC}` (e.g., `P1/002 - wildcard CORS config`)
+   - **Body:** The full content of the todo `.md` file (problem + fix sections)
+   - **Labels:** Add `priority:{PRIORITY}` label if it exists, otherwise create it
+   - Command: `gh issue create --title "..." --body "..." --label "..."`
+   - Capture the issue number from the output.
+6. Ensure the `dev` branch exists:
+   - If it doesn't exist locally or remotely: `git checkout -b dev && git push -u origin dev`
+   - If it exists only on remote: `git fetch origin dev && git checkout -b dev origin/dev`
+   - If it exists locally: `git checkout dev && git pull origin dev`
+7. Create a feature branch from `dev` (skip if branch already exists per pre-flight check 3):
+   - Command: `git checkout -b {prefix}/{NUMBER}-{kebab-case-short-desc}`
+8. Move the todo file to `doing/`: `git mv todos/backlog/{file} todos/doing/{file}`
+9. Update the status in `the latest priority file in todos/priority/` from `BACKLOG` to `DOING` for this item.
+10. Commit: `git commit -m "chore: start work on #{NUMBER}"`
+
+### Phase 1 — Analysis
+
+**If the todo file contains a `**Brainstorm:**` field** (feature-originated from `/new-feature`):
+- Read the linked brainstorm document instead of running `/ce:ideate` and `/ce:brainstorm` from scratch.
+- Summarize the key decisions and requirements from the brainstorm.
+- Only run `/ce:ideate` if the user explicitly wants to explore additional approaches beyond what the brainstorm covered.
+
+**Otherwise:** Run `/ce:ideate` then `/ce:brainstorm`. Combine ideation and requirements analysis into a single phase. Focus on the specific problem described in the todo file. Explore approaches, then ground the discussion in the codebase and produce a focused requirements summary.
+
+For **Small effort** items (as marked in the priority file): keep this phase brief — a short analysis paragraph is sufficient. Do not over-analyze one-line fixes.
+
+**Pause and ask the user to approve before continuing.**
+
+### Phase 2 — Plan
+
+Run: `/ce:plan`
+
+Create a concrete implementation plan based on the analysis output. Include specific files to change, functions to modify, and test strategy.
+
+**Pause and ask the user to approve before continuing.**
+
+### Phase 3 — Implementation
+
+Run: `/ce:work`
+
+Execute the approved plan. Write the code changes.
+
+**Pause and ask the user to approve before continuing.**
+
+### Phase 4 — Post-implementation Review
+
+Run: `/ce:review`
+
+Comprehensive review of all code changes. Check for:
+- Security implications
+- Performance impact
+- Code quality and conventions
+- Test coverage
+- Edge cases
+
+Report findings. If critical issues are found, go back to Phase 3 to fix them. **Maximum 3 round-trips between Phase 3 and Phase 4.** After 3 iterations, present remaining issues and ask the user how to proceed (accept as-is, keep iterating, or abort).
+
+**Pause and ask the user to approve the final state before continuing.**
+
+### Phase 5 — Documentation & Knowledge
+
+Run: `/ce:compound`
+
+Document what was learned and any patterns that emerged. This compounds team knowledge for future work.
+
+For **Small effort** items: skip this phase unless something genuinely surprising was learned. A one-line CORS fix does not need a knowledge document.
+
+### Phase 6 — Finalize
+
+1. Ensure all changes are committed on the feature branch.
+2. Move the todo file: `git mv todos/doing/{file} todos/done/{file}`
+3. Update the status in `the latest priority file in todos/priority/` from `DOING` to `DONE` for this item.
+4. Commit the todo status change: `git commit -m "chore: mark #{NUMBER} as done"`
+5. Push the branch: `git push -u origin {prefix}/{NUMBER}-{kebab-case-short-desc}`
+6. Create a Pull Request:
+   ```
+   gh pr create \
+     --base dev \
+     --title "{prefix}: {PRIORITY}/{NUMBER} - {SHORT_DESC}" \
+     --body "$(cat <<'EOF'
+   ## Summary
+
+   Closes #{ISSUE_NUMBER}
+
+   {Brief description of what was done and why}
+
+   ## Changes
+   {Bullet list of key changes}
+
+   ## Test Plan
+   {How to verify the fix works}
+
+   ---
+   Workflow: `/solve-todo {NUMBER}`
+   🤖 Generated with [Claude Code](https://claude.com/claude-code)
+   EOF
+   )"
+   ```
+7. Report the PR URL and issue URL to the user.
+8. Switch back to the dev branch: `git checkout dev`
+
+## Error Handling
+
+If any phase fails, report the error clearly and ask the user how to proceed. Never skip phases or auto-retry destructive operations.
+
+## Notes
+
+- Each todo file in `todos/backlog/` contains the full problem description and suggested fix.
+- The `dev` branch is the integration branch — all PRs target `dev`, **never** `main` directly.
+- While pushing the branch, it must NEVER be done with the `--force` flag.

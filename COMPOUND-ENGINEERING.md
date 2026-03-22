@@ -66,3 +66,17 @@ If you're new to this plugin, start with just two commands:
 2. `/ce:compound` — after finishing it
 
 These two alone significantly improve the quality and reusability of your work over time.
+
+---
+
+## Custom Skills (built on top of this plugin)
+
+This repo includes three custom skills in `.claude/skills/` that chain the `/ce:*` commands above into end-to-end workflows:
+
+| Skill | What it does |
+|-------|-------------|
+| `/review-and-plan` | Reviews codebase → creates `todos/` backlog → generates priority doc → hands off to `/solve-todo` |
+| `/new-feature` | Interactive brainstorm → creates one backlog item + GitHub issue → hands off to `/solve-todo` |
+| `/solve-todo` | Picks a todo → analysis → plan → implement → review → PR (full pipeline) |
+
+See [`custom-skills.md`](custom-skills.md) for full documentation, or browse the skill definitions directly in [`.claude/skills/`](.claude/skills/).
