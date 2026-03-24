@@ -126,11 +126,21 @@ For **Small effort** items: skip this phase unless something genuinely surprisin
 ### Phase 6 — Finalize
 
 1. Ensure all changes are committed on the feature branch.
-2. Move the todo file: `git mv todos/doing/{file} todos/done/{file}`
-3. Update the status in `the latest priority file in todos/priority/` from `DOING` to `DONE` for this item.
-4. Commit the todo status change: `git commit -m "chore: mark #{NUMBER} as done"`
-5. Push the branch: `git push -u origin {prefix}/{NUMBER}-{kebab-case-short-desc}`
-6. Create a Pull Request:
+2. **User Testing Gate (MANDATORY PAUSE):**
+   - Present a summary of what was changed and how to test it (include test commands from Phase 2's plan and any manual testing steps).
+   - Ask: "All code changes are committed. Please test locally. When done, confirm:
+     (a) Everything works — proceed to PR
+     (b) Found issues — describe them and I'll go back to fix
+     (c) Abort — leave branch as-is for later"
+   - If (b): return to Phase 3 with the user's feedback. The same 3-iteration limit from the Phase 3/4 cycle applies.
+   - If (c): report current state (branch name, todo still in `doing/`), stop.
+3. Push the branch: `git push -u origin {prefix}/{NUMBER}-{kebab-case-short-desc}`
+   - If push fails: report the error clearly and do NOT proceed. The todo stays in `doing/`.
+4. Move the todo file: `git mv todos/doing/{file} todos/done/{file}`
+5. Update the status in `the latest priority file in todos/priority/` from `DOING` to `DONE` for this item.
+6. Commit the todo status change: `git commit -m "chore: mark #{NUMBER} as done"`
+7. Push the status commit: `git push`
+8. Create a Pull Request:
    ```
    gh pr create \
      --base dev \
@@ -154,8 +164,10 @@ For **Small effort** items: skip this phase unless something genuinely surprisin
    EOF
    )"
    ```
-7. Report the PR URL and issue URL to the user.
-8. Switch back to the dev branch: `git checkout dev`
+   - If PR creation fails: report the error and provide the exact `gh pr create` command for manual retry.
+9. Report the PR URL and issue URL to the user.
+10. Switch back to the dev branch: `git checkout dev`
+    - If checkout fails: warn but do not treat as a pipeline failure (URLs already reported in step 9).
 
 ## Error Handling
 
