@@ -56,7 +56,7 @@ Three slash-command skills that form a complete engineering workflow: from ident
 1. **Pre-flight** — checks for uncommitted changes, validates `todos/` architecture exists (run `/review-and-plan` first), scans for overlapping existing items
 2. **Brainstorm** — runs `/ce:brainstorm` interactively with you to shape the idea into requirements; produces a doc in `docs/brainstorms/`
 3. **Structure** — creates a todo file in `todos/backlog/`, updates the priority document, creates a GitHub issue with `feature` label
-4. **Commit** — stages and commits all artifacts on the `dev` branch
+4. **Commit** — stages and commits all artifacts on the development branch (auto-detected or user-specified during pre-flight)
 5. **Hand Off** — offers to start `/solve-todo {NNN}` immediately
 
 **Exit path:** If the brainstorm concludes the idea shouldn't be built, it stops cleanly with no artifacts created.
@@ -78,13 +78,13 @@ Three slash-command skills that form a complete engineering workflow: from ident
 ```
 
 **Workflow:**
-1. **Setup** — validates the todo exists, checks for existing branches/issues, creates a GitHub issue, branches from `dev`, moves todo to `todos/doing/`
+1. **Setup** — validates the todo exists, checks for existing branches/issues, detects the development branch, creates a GitHub issue, branches from the development branch, moves todo to `todos/doing/`
 2. **Analysis** — reads linked brainstorm doc (if from `/new-feature`) or runs `/ce:ideate` + `/ce:brainstorm` to understand the problem
 3. **Plan** — runs `/ce:plan` to create a concrete implementation plan with specific files and test strategy
 4. **Implementation** — runs `/ce:work` to write the code changes
 5. **Review** — runs `/ce:review` to check for security, performance, quality issues (up to 3 fix iterations)
 6. **Documentation** — runs `/ce:compound` to document learnings (skipped for small items)
-7. **Finalize** — moves todo to `todos/done/`, pushes branch, creates PR targeting `dev`, closes the GitHub issue
+7. **Finalize** — moves todo to `todos/done/`, pushes branch, creates PR targeting the development branch, closes the GitHub issue
 
 **Branch naming:** Automatically chosen based on the todo's nature:
 - `fix/` — security or bug fixes

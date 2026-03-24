@@ -54,7 +54,7 @@ Three skills that form a complete engineering workflow: from identifying problem
 4. Creates a todo file with `Source: Feature` and a link to the brainstorm doc
 5. Appends to the priority document (Execution Order + Quick Reference)
 6. Creates a GitHub issue with `feature` label
-7. Commits on `dev` branch and offers to start `/solve-todo {NNN}`
+7. Commits on the development branch (auto-detected or user-specified) and offers to start `/solve-todo {NNN}`
 
 **Exit path:** If the brainstorm concludes the idea shouldn't be built, stops cleanly with no artifacts created.
 
@@ -76,14 +76,14 @@ Three skills that form a complete engineering workflow: from identifying problem
 
 **What it does:**
 1. Pre-flight checks (input validation, clean working tree, existing branch/issue, dependencies)
-2. Creates a GitHub issue and feature branch from `dev`
+2. Creates a GitHub issue and feature branch from the development branch
 3. Moves todo to `todos/doing/` (status: DOING)
 4. **Analysis** — reads brainstorm doc if linked (from `/new-feature`), otherwise runs `/ce:ideate` + `/ce:brainstorm`
 5. **Plan** — runs `/ce:plan` for implementation strategy
 6. **Implementation** — runs `/ce:work` to write code
 7. **Review** — runs `/ce:review` (max 3 fix iterations)
 8. **Documentation** — runs `/ce:compound` (skipped for small items)
-9. Moves todo to `todos/done/`, creates PR targeting `dev`, closes the GitHub issue
+9. Moves todo to `todos/done/`, creates PR targeting the development branch, closes the GitHub issue
 
 **Branch prefixes:** Automatically chosen based on todo source:
 - `fix/` — security or bug fixes

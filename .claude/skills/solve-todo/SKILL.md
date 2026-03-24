@@ -38,6 +38,13 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
 3. **Check for existing branch:** Run `git branch --list 'fix/{NUMBER}-*' 'refactor/{NUMBER}-*' 'test/{NUMBER}-*' 'chore/{NUMBER}-*' 'feat/{NUMBER}-*'`. If a branch already exists for this todo (any prefix), ask the user: "A branch for this todo already exists. Switch to it and resume, or delete it and start fresh?"
 4. **Check for existing issue:** Run `gh issue list --search "{PRIORITY}/{NUMBER}" --state open`. If a matching issue already exists, reuse its number instead of creating a new one.
 5. **Check dependencies:** Read the **Quick Reference** table's Dependencies column for this todo. If any dependency is still `BACKLOG` or `DOING` (check their Status in the same table), warn: "Warning: #{DEP_NUMBER} ({dep description}) is not done yet. This todo depends on it. Continue anyway?" Let the user decide.
+6. **Determine development branch (`{DEV_BRANCH}`):**
+   - Auto-detect: Run `git branch -a` and check for branches matching common integration branch names: `dev`, `develop`, `development`, `staging`, `next`.
+   - If exactly one match is found: announce "Detected development branch: `{name}`. Using this as the integration branch. Say 'no' to override." Use it as `{DEV_BRANCH}`.
+   - If multiple matches are found: ask the user which one to use.
+   - If no matches are found: ask the user: "What is your development/integration branch name?"
+   - Validate the branch exists locally or on remote. If it doesn't exist, ask: "Branch `{name}` doesn't exist yet. Create it from the current branch, or enter a different name?"
+   - Use `{DEV_BRANCH}` for all subsequent references to the integration branch in this pipeline.
 
 **Main setup steps:**
 
@@ -61,11 +68,11 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
    - **Labels:** Add `priority:{PRIORITY}` label if it exists, otherwise create it
    - Command: `gh issue create --title "..." --body "..." --label "..."`
    - Capture the issue number from the output.
-6. Ensure the `dev` branch exists:
-   - If it doesn't exist locally or remotely: `git checkout -b dev && git push -u origin dev`
-   - If it exists only on remote: `git fetch origin dev && git checkout -b dev origin/dev`
-   - If it exists locally: `git checkout dev && git pull origin dev`
-7. Create a feature branch from `dev` (skip if branch already exists per pre-flight check 3):
+6. Ensure the `{DEV_BRANCH}` branch exists:
+   - If it doesn't exist locally or remotely: `git checkout -b {DEV_BRANCH} && git push -u origin {DEV_BRANCH}`
+   - If it exists only on remote: `git fetch origin {DEV_BRANCH} && git checkout -b {DEV_BRANCH} origin/{DEV_BRANCH}`
+   - If it exists locally: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
+7. Create a feature branch from `{DEV_BRANCH}` (skip if branch already exists per pre-flight check 3):
    - Command: `git checkout -b {prefix}/{NUMBER}-{kebab-case-short-desc}`
 8. Move the todo file to `doing/`: `git mv todos/backlog/{file} todos/doing/{file}`
 9. Update the status in `the latest priority file in todos/priority/` from `BACKLOG` to `DOING` for this item.
@@ -143,7 +150,7 @@ For **Small effort** items: skip this phase unless something genuinely surprisin
 8. Create a Pull Request:
    ```
    gh pr create \
-     --base dev \
+     --base {DEV_BRANCH} \
      --title "{prefix}: {PRIORITY}/{NUMBER} - {SHORT_DESC}" \
      --body "$(cat <<'EOF'
    ## Summary
@@ -165,9 +172,13 @@ For **Small effort** items: skip this phase unless something genuinely surprisin
    )"
    ```
    - If PR creation fails: report the error and provide the exact `gh pr create` command for manual retry.
-9. Report the PR URL and issue URL to the user.
-10. Switch back to the dev branch: `git checkout dev`
-    - If checkout fails: warn but do not treat as a pipeline failure (URLs already reported in step 9).
+9. Close the GitHub issue (since PRs target `{DEV_BRANCH}`, not the default branch, GitHub's auto-close via `Closes #` won't trigger):
+   ```
+   gh issue close {ISSUE_NUMBER} --comment "Resolved via PR #{PR_NUMBER}"
+   ```
+10. Report the PR URL and issue URL to the user.
+11. Switch back to the `{DEV_BRANCH}` branch: `git checkout {DEV_BRANCH}`
+    - If checkout fails: warn but do not treat as a pipeline failure (URLs already reported in step 10).
 
 ## Error Handling
 
@@ -176,5 +187,5 @@ If any phase fails, report the error clearly and ask the user how to proceed. Ne
 ## Notes
 
 - Each todo file in `todos/backlog/` contains the full problem description and suggested fix.
-- The `dev` branch is the integration branch — all PRs target `dev`, **never** `main` directly.
+- The `{DEV_BRANCH}` is the integration branch (determined during Phase 0, pre-flight check 6) — all PRs target `{DEV_BRANCH}`, **never** `main` directly.
 - While pushing the branch, it must NEVER be done with the `--force` flag.

@@ -25,11 +25,19 @@ Creates a new backlog item from a human-originated idea, problem, or necessity. 
 
 2. **Validate input:** If no description was provided, ask the user: "What would you like to build? Describe the problem, idea, or necessity."
 
-3. **Validate prerequisites.** Check that `todos/backlog/`, `todos/doing/`, `todos/done/`, `todos/priority/` all exist AND that at least one priority file exists in `todos/priority/`. If missing, tell the user: "The todos/ architecture or priority document is missing. Run `/review-and-plan` first to set up the backlog structure, or confirm if you'd like me to create the directories now." Let the user decide.
+3. **Determine development branch (`{DEV_BRANCH}`):**
+   - Auto-detect: Run `git branch -a` and check for branches matching common integration branch names: `dev`, `develop`, `development`, `staging`, `next`.
+   - If exactly one match is found: announce "Detected development branch: `{name}`." Use it as `{DEV_BRANCH}`.
+   - If multiple matches are found: ask the user which one to use.
+   - If no matches are found: ask the user: "What is your development/integration branch name?"
+   - Validate the branch exists locally or on remote. If it doesn't exist, ask: "Branch `{name}` doesn't exist yet. Create it from the current branch, or enter a different name?"
+   - Use `{DEV_BRANCH}` for all subsequent references to the integration branch in this pipeline.
 
-4. **Check for partial prior run.** Scan `todos/backlog/` for uncommitted files and `docs/brainstorms/` for recent (today) brainstorm docs matching the user's description topic. If found, ask: "A previous `/new-feature` run may have partially completed. Resume from existing artifacts, or start fresh (deletes partial artifacts)?"
+4. **Validate prerequisites.** Check that `todos/backlog/`, `todos/doing/`, `todos/done/`, `todos/priority/` all exist AND that at least one priority file exists in `todos/priority/`. If missing, tell the user: "The todos/ architecture or priority document is missing. Run `/review-and-plan` first to set up the backlog structure, or confirm if you'd like me to create the directories now." Let the user decide.
 
-5. **Scan for overlaps.** Read the `# Title` line from each todo file in `todos/backlog/`, `todos/doing/`, and `todos/done/`. Compare against the user's description: extract significant nouns and verbs (ignoring stop words like "the", "a", "add", "fix"), and report any todo where 2 or more significant words match. If potential overlaps are found:
+5. **Check for partial prior run.** Scan `todos/backlog/` for uncommitted files and `docs/brainstorms/` for recent (today) brainstorm docs matching the user's description topic. If found, ask: "A previous `/new-feature` run may have partially completed. Resume from existing artifacts, or start fresh (deletes partial artifacts)?"
+
+6. **Scan for overlaps.** Read the `# Title` line from each todo file in `todos/backlog/`, `todos/doing/`, and `todos/done/`. Compare against the user's description: extract significant nouns and verbs (ignoring stop words like "the", "a", "add", "fix"), and report any todo where 2 or more significant words match. If potential overlaps are found:
    - Report them: "These existing items look related: #{NNN} - {title}, #{NNN} - {title}"
    - Ask: "Continue with a new feature, or work on one of these existing items instead?"
    - If the user picks an existing item, invoke `/solve-todo {NUMBER}` and stop.
@@ -105,10 +113,10 @@ Append to it:
 ### Phase 3 — Commit
 
 1. Stage the specific files created: the todo file, the updated priority document, and the brainstorm requirements document.
-2. Ensure `dev` branch is up to date: `git checkout dev && git pull origin dev`
-3. If the work was done on a different branch, cherry-pick or merge the changes into `dev`.
-4. Commit on `dev`: `git commit -m "feat: add backlog item #{NNN} - {short desc}"`
-5. Switch back to `dev` (stay on `dev` for the handoff to `/solve-todo`).
+2. Ensure `{DEV_BRANCH}` branch is up to date: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
+3. If the work was done on a different branch, cherry-pick or merge the changes into `{DEV_BRANCH}`.
+4. Commit on `{DEV_BRANCH}`: `git commit -m "feat: add backlog item #{NNN} - {short desc}"`
+5. Switch back to `{DEV_BRANCH}` (stay on `{DEV_BRANCH}` for the handoff to `/solve-todo`).
 
 ### Phase 4 — Hand Off
 
