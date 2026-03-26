@@ -23,9 +23,17 @@ Reviews the codebase, creates the `todos/` architecture, generates todo files an
 
 1. **Check working tree:** Run `git status --porcelain`. If there are uncommitted changes, warn the user and ask whether to stash, commit, or abort before continuing.
 
-2. **Check if `todos/` architecture exists.** Look for all four directories: `todos/backlog/`, `todos/doing/`, `todos/done/`, `todos/priority/`. Note which exist and which are missing.
+2. **Determine development branch (`{DEV_BRANCH}`):**
+   - Auto-detect: Run `git branch -a` and check for branches matching common integration branch names: `dev`, `develop`, `development`, `staging`, `next`.
+   - If exactly one match is found: announce "Detected development branch: `{name}`." Use it as `{DEV_BRANCH}`.
+   - If multiple matches are found: ask the user which one to use.
+   - If no matches are found: ask the user: "What is your development/integration branch name?"
+   - Validate the branch exists locally or on remote. If it doesn't exist, ask: "Branch `{name}` doesn't exist yet. Create it from the current branch, or enter a different name?"
+   - Use `{DEV_BRANCH}` for all subsequent references to the integration branch in this pipeline.
 
-3. **Scan for existing state.** Check all three directories (`todos/backlog/`, `todos/doing/`, `todos/done/`) for `.md` todo files, and `todos/priority/` for priority documents.
+3. **Check if `todos/` architecture exists.** Look for all four directories: `todos/backlog/`, `todos/doing/`, `todos/done/`, `todos/priority/`. Note which exist and which are missing.
+
+4. **Scan for existing state.** Check all three directories (`todos/backlog/`, `todos/doing/`, `todos/done/`) for `.md` todo files, and `todos/priority/` for priority documents.
    - **Determine the next priority document number:** Count existing files in `todos/priority/` (e.g., if `000-priority-todos.md` exists, the next is `001`). The new priority document will be named `{NEXT_PRIORITY_NUMBER}-priority-todos.md`.
    - **Determine the next todo file number:** Find the highest `{NUMBER}` across all `.md` files in `backlog/`, `doing/`, and `done/`. New findings start from `highest + 1`. If no files exist anywhere, start from `001`.
    - **If existing todo files are found in `backlog/`** (items not yet solved):
@@ -35,7 +43,7 @@ Reviews the codebase, creates the `todos/` architecture, generates todo files an
      - **Overwrite:** Only deletes files in `todos/backlog/`. Files in `todos/doing/` and `todos/done/` are **never touched** (they represent in-progress or completed work). New findings still start from `highest + 1` across all directories to avoid number collisions.
    - **If no backlog files exist** (all previous items solved or fresh codebase): proceed normally. New findings start from `highest + 1` across `doing/` and `done/`, or from `001` if no files exist anywhere.
 
-4. **If any directories are missing:** proceed to Phase 1. Otherwise skip to Phase 2.
+5. **If any directories are missing:** proceed to Phase 1. Otherwise skip to Phase 2.
 
 ### Phase 1 — Create Architecture
 
@@ -71,6 +79,8 @@ For each finding, capture:
 - Suggested fix (1-2 sentences)
 
 **Pause and present all findings to the user for approval before continuing.** The user may add, remove, or reprioritize findings. If the user adds a finding with vague details, investigate the codebase to fill in affected files and line numbers before generating the todo file.
+
+**Zero findings:** If the review produces no findings (or the user removes all findings during approval), skip Phase 3 but still proceed to Phase 4 to create a minimal priority document with empty tables. This ensures the `todos/priority/` directory has at least one file, which is a prerequisite for `/new-feature`.
 
 ### Phase 3 — Generate Todo Files
 
@@ -169,12 +179,13 @@ The Quick Reference table must list ALL findings sorted by execution order. This
 
 ### Phase 5 — Commit & Hand Off
 
-1. Stage all new files in `todos/`.
-2. Commit: `git commit -m "chore: add code review findings for {scope}"` where `{scope}` is the path argument or "full codebase".
-3. Report a summary:
+1. Ensure `{DEV_BRANCH}` is up to date: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`. If the work was done on a different branch, cherry-pick or merge the changes into `{DEV_BRANCH}`.
+2. Stage all new files in `todos/`.
+3. Commit on `{DEV_BRANCH}`: `git commit -m "chore: add code review findings for {scope}"` where `{scope}` is the path argument or "full codebase".
+4. Report a summary:
    - Total findings by priority (P1/P2/P3)
    - Total estimated effort
-4. Ask the user: **"Ready to start solving? Run `/solve-todo next` to begin with the first item, or `/solve-todo {number}` to pick a specific one."**
+5. Ask the user: **"Ready to start solving? Run `/solve-todo next` to begin with the first item, or `/solve-todo {number}` to pick a specific one."**
 
 If the user says yes or gives a number, invoke `/solve-todo` with the appropriate argument.
 

@@ -70,7 +70,33 @@ Convert the brainstorm output into project artifacts.
 - **Short description:** Derive a 3-6 word kebab-case description from the brainstorm title.
 - **Affected files:** List files/modules that will likely need modification based on the brainstorm analysis. Use `TBD` if the feature is entirely new with no existing touch points.
 
-**Step 2: Create todo file**
+**Step 2: Append to the latest priority file**
+
+Find the latest (highest-numbered) priority file in `todos/priority/`. Append the new feature entry to it — do NOT create a separate priority file.
+
+- **Recommended Execution Order:** If a `### New Features` section exists at the end of the file, add a row to its table. Otherwise, create a new `### New Features` section after the last existing section, with the standard table header and one row. Use `Order = max(existing Order across all tables) + 1`.
+- **Quick Reference:** Add a new row at the bottom with `Order = max(existing Order) + 1` and columns matching the existing schema. Set Dependencies to `None` unless the brainstorm identified prerequisites.
+
+The appended entry in **Recommended Execution Order** should include:
+
+| Order | # | Todo | Priority | Effort | Dependencies | Rationale |
+|-------|---|------|----------|--------|--------------|-----------|
+| {next order} | {NNN} | {short title} | {P1/P2/P3} | {Small/Medium/Large} | {None or #dep} | {1-line rationale from brainstorm} |
+
+The appended entry in **Quick Reference** should include:
+
+| Order | # | Todo | Priority | Effort | Dependencies | Status |
+|-------|---|------|----------|--------|--------------|--------|
+| {next order} | {NNN} | {short title} | {P1/P2/P3} | {effort} | {None or #dep} | BACKLOG |
+
+Effort tiers (use exactly one — no hybrid values):
+- **Small:** ~5 min to ~1 hr
+- **Medium:** ~2-4 hrs
+- **Large:** ~6-8+ hrs
+
+**Step 3: Create backlog entry**
+
+Create a lightweight todo file in `todos/backlog/` that references the priority file. This is required for pipeline compatibility with `/solve-todo`.
 
 File: `todos/backlog/{NNN}-{pN}-{kebab-desc}.md`
 
@@ -81,6 +107,8 @@ File: `todos/backlog/{NNN}-{pN}-{kebab-desc}.md`
 - **Source:** Feature
 - **Files:** {`path/to/file.ext` or `TBD`}
 - **Brainstorm:** {`docs/brainstorms/YYYY-MM-DD-{topic}-requirements.md`}
+- **Priority File:** {`todos/priority/{LATEST_PRIORITY_NUMBER}-priority-todos.md`}
+- **Issue:** {`#{ISSUE_NUMBER}` — filled after Step 4}
 
 ## Problem
 
@@ -91,14 +119,6 @@ File: `todos/backlog/{NNN}-{pN}-{kebab-desc}.md`
 {The proposed approach — derived from the brainstorm's requirements and chosen approach.}
 ```
 
-**Step 3: Update priority document**
-
-Find the latest priority file in `todos/priority/` (highest `{NNN}`).
-
-Append to it:
-- **Recommended Execution Order:** If a `### New Features` section exists at the end, add a row to its table. Otherwise, create a new `### New Features` section after the last sprint section, with the standard table header (`Order | # | Todo | Priority | Effort | Dependencies | Rationale`) and one row. Use `Order = max(existing Order across all tables) + 1`. For Rationale, use a brief explanation from the brainstorm.
-- **Quick Reference:** Add a new row at the bottom with `Order = max(existing Order) + 1` and columns matching the existing schema (`Order | # | Todo | Priority | Effort | Dependencies | Status`). Set Dependencies to `None` unless the brainstorm identified prerequisites.
-
 **Step 4: Create GitHub issue**
 
 - Ensure labels exist: `gh label create "priority:{pN}" --force 2>/dev/null; gh label create "feature" --force 2>/dev/null`
@@ -107,12 +127,13 @@ Append to it:
 - Labels: `priority:{pN}`, `feature`
 - Command: `gh issue create --title "..." --body "..." --label "..."`
 - Capture the issue number.
+- **Update the backlog file:** Replace `**Issue:** {placeholder}` with `**Issue:** #{ISSUE_NUMBER}` in the backlog `.md` file created in Step 3. This allows `/solve-todo` to find the existing issue directly instead of searching.
 
-**Pause and show the user the todo file and priority doc changes for approval.**
+**Pause and show the user the backlog entry and the priority document updates for approval.**
 
 ### Phase 3 — Commit
 
-1. Stage the specific files created: the todo file, the updated priority document, and the brainstorm requirements document.
+1. Stage the specific files created/modified: the backlog entry, the updated priority document, and the brainstorm requirements document.
 2. Ensure `{DEV_BRANCH}` branch is up to date: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
 3. If the work was done on a different branch, cherry-pick or merge the changes into `{DEV_BRANCH}`.
 4. Commit on `{DEV_BRANCH}`: `git commit -m "feat: add backlog item #{NNN} - {short desc}"`

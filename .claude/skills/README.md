@@ -25,11 +25,12 @@ Three skills that form a complete engineering workflow: from identifying problem
 ```
 
 **What it does:**
-1. Creates `todos/` directory structure (backlog, doing, done, priority)
-2. Runs a comprehensive code review (`/ce:review`)
-3. Generates individual todo files in `todos/backlog/`
-4. Generates a priority document with execution order and Quick Reference table
-5. Commits everything and offers to start `/solve-todo next`
+1. Auto-detects the development branch (`dev`, `develop`, `staging`, etc.) or asks the user
+2. Creates `todos/` directory structure (backlog, doing, done, priority)
+3. Runs a comprehensive code review (`/ce:review`)
+4. Generates individual todo files in `todos/backlog/`
+5. Generates a priority document with execution order and Quick Reference table
+6. Commits on the development branch and offers to start `/solve-todo next`
 
 **Handles re-runs:** Detects existing findings and offers to keep, overwrite, or abort. Numbering never collides across review cycles.
 
@@ -51,9 +52,9 @@ Three skills that form a complete engineering workflow: from identifying problem
 1. Validates prerequisites (requires `todos/` architecture and a priority document to exist)
 2. Scans for overlapping existing backlog items
 3. Runs `/ce:brainstorm` interactively to shape the idea into concrete requirements
-4. Creates a todo file with `Source: Feature` and a link to the brainstorm doc
-5. Appends to the priority document (Execution Order + Quick Reference)
-6. Creates a GitHub issue with `feature` label
+4. Creates a todo file with `Source: Feature`, a link to the brainstorm doc, and an `Issue` field
+5. Appends the new item to the latest existing priority document (Execution Order + Quick Reference)
+6. Creates a GitHub issue with `feature` label and writes the issue number back into the todo file
 7. Commits on the development branch (auto-detected or user-specified) and offers to start `/solve-todo {NNN}`
 
 **Exit path:** If the brainstorm concludes the idea shouldn't be built, stops cleanly with no artifacts created.
