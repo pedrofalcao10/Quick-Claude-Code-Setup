@@ -18,6 +18,36 @@ That's it. The skills become available immediately as `/ce:*` commands.
 
 ---
 
+## Operating Methodology — Deploy-Driven
+
+These commands are most effective when run under the **Value-First Mantra**: *"Does this action put a working solution in front of a user today? If not, how can I simplify it until it does?"*
+
+**Clever (Strategic Sharpness)**
+- Rapid pattern recognition — use `/ce:ideate` and `/ce:review` to surface systemic bottlenecks, not symptoms.
+- First-principles engineering — in `/ce:brainstorm` and `/ce:plan`, strip problems to core components; reject over-engineered traps.
+- Minimal Viable Intelligence — stop ideating/brainstorming the moment the decision is obvious.
+
+**Clear (High-Fidelity Communication)**
+- Technical-to-value translation — every brainstorm, plan, and compound doc states the user/stakeholder outcome.
+- Documentation as code — `/ce:compound` artifacts must let a teammate resume without a meeting.
+- Radical Transparency — report each command's output with 🟢/🟡/🔴 status + blockers + next action.
+
+**Deploy-Driven (Accelerated Execution)**
+- Continuous Value Delivery — prefer many ≤48-hour `/ce:work` increments over one long-running effort.
+- Automated Governance — let `/ce:review` + CI do the enforcement; never `--no-verify`, never `--force` push.
+- 80/20 Deployment — ship the 20% of the plan that removes 80% of the risk first; defer the rest.
+
+**Value Matrix:**
+
+| Dimension | Traditional | Optimized | Value |
+|---|---|---|---|
+| Problem solving | Deep research then plan | Prototype in public | Faster feedback |
+| Project mgmt | Timelines & gantts | Remove friction/blockers | Team velocity |
+| Execution | Feature completeness | Deployment frequency | Live user data |
+| Strategy | Long-term roadmap | Dynamic pivot capability | Resilience |
+
+---
+
 ## The Workflow
 
 The plugin structures work around a repeating cycle:

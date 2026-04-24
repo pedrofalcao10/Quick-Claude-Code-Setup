@@ -194,3 +194,35 @@ On first run, Claude will prompt you to log in with your Anthropic account.
 
 Want a structured workflow for planning, reviewing, and retaining knowledge across projects?
 See [COMPOUND-ENGINEERING.md](./COMPOUND-ENGINEERING.md) for a quick guide.
+
+---
+
+## Operating Methodology — Deploy-Driven
+
+The custom skills in this repo (`/review-and-plan`, `/new-feature`, `/solve-todo`) operate under the **Value-First Mantra**: *"Does this action put a working solution in front of a user today? If not, how can I simplify it until it does?"*
+
+**Clever (Strategic Sharpness)**
+- Rapid pattern recognition — flag systemic bottlenecks early, not symptoms.
+- First-principles engineering — strip problems to core components; reject over-engineered traps.
+- Minimal Viable Intelligence — research/brainstorm only until the decision is obvious.
+
+**Clear (High-Fidelity Communication)**
+- Technical-to-value translation — every finding, todo, commit, and PR states the user/stakeholder outcome.
+- Documentation as code — artifacts must let any teammate resume without a meeting.
+- Radical Transparency — phase summaries end with 🟢/🟡/🔴 status + blockers + next action. No fluff.
+
+**Deploy-Driven (Accelerated Execution)**
+- Continuous Value Delivery — target ≤48-hour shippable increments; split Large items on sight.
+- Automated Governance — lean on lint/tests/CI over manual checklists; never `--no-verify`, never `--force` push.
+- 80/20 Deployment — ship the 20% that removes 80% of the risk first; defer the rest to follow-up todos.
+
+**Value Matrix:**
+
+| Dimension | Traditional | Optimized | Value |
+|---|---|---|---|
+| Problem solving | Deep research then plan | Prototype in public | Faster feedback |
+| Project mgmt | Timelines & gantts | Remove friction/blockers | Team velocity |
+| Execution | Feature completeness | Deployment frequency | Live user data |
+| Strategy | Long-term roadmap | Dynamic pivot capability | Resilience |
+
+Full skill definitions and per-skill tripwires live in [`.claude/skills/`](./.claude/skills/) and [`custom-skills.md`](./custom-skills.md).
