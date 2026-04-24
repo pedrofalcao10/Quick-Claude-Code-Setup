@@ -1,6 +1,6 @@
 # Custom Claude Code Skills
 
-Three slash-command skills that form a complete engineering workflow: from identifying problems to shipping fixes.
+Four slash-command skills that form a complete engineering workflow: from identifying problems to shipping fixes.
 
 > **Prerequisite:** These skills depend on the [compound-engineering plugin](https://github.com/anthropics/claude-code-plugins). They call `/ce:review`, `/ce:brainstorm`, `/ce:ideate`, `/ce:plan`, `/ce:work`, and `/ce:compound` internally. Without the plugin installed, these skills will not function.
 
@@ -43,7 +43,8 @@ Pipeline tripwire: if a phase output can't be explained to a stakeholder in 30 s
 ```
 /review-and-plan  →  finds code issues  →  creates MANY todos  →  /solve-todo next
 /new-feature      →  brainstorms idea   →  creates ONE todo    →  /solve-todo {NNN}
-/solve-todo       →  resolves any todo through analysis → plan → implement → review → PR
+/bug-fix          →  reproduce → root cause → fix + regression test → local merge
+/solve-todo       →  resolves any todo through analysis → plan → implement → review → merge
 ```
 
 ---
@@ -97,9 +98,42 @@ Pipeline tripwire: if a phase output can't be explained to a stakeholder in 30 s
 
 ---
 
+## /bug-fix
+
+**What it does:** Resolves a specific, reported bug through a strict **reproduce → root-cause → fix-with-regression-test** pipeline. Uses the `fix/` branch prefix and mirrors the local-only workflow used by `/solve-todo`.
+
+**When to use:** You have a concrete bug report (user complaint, error log, broken behavior) that needs resolving — you are not exploring an idea or doing a broad codebase review.
+
+**Usage:**
+```
+/bug-fix PDF export crashes on orders with >100 line items
+/bug-fix #42                        # start from an existing GitHub issue
+/bug-fix                            # will ask for a description
+```
+
+**Explicit rules (non-negotiable):**
+1. No fix without reproduction — Phase 1 must produce a deterministically failing test.
+2. No fix without root cause — Phase 2 must name the specific file/function/input that breaks.
+3. Every fix ships with a regression test that fails before the fix and passes after.
+4. Smallest possible diff — no drive-by refactors; adjacent issues get their own todos.
+
+**Workflow:**
+1. **Pre-flight** — working tree, dev branch, gitignore `todos/`, duplicate scan, create GitHub issue with `bug` label, create local-only `fix/{NNN}-...` branch, move todo to `doing/`
+2. **Reproduce** — write a failing regression test; pipeline halts if reproduction fails
+3. **Root Cause** — `/ce:brainstorm` narrowly focused on why the failing test fails
+4. **Plan** — `/ce:plan` with the smallest possible diff, including an explicit "will NOT change" list
+5. **Implement** — `/ce:work` makes the failing test pass; add edge-case tests
+6. **Review** — `/ce:review` focused on regression surface, edge cases, and scope creep
+7. **Documentation** — `/ce:compound` for non-trivial root causes (skipped for trivial bugs)
+8. **User Testing, Local Merge & Finalize** — mandatory manual test gate on the local branch, then `--no-ff` merge into `{DEV_BRANCH}`, push dev, delete the local `fix/` branch, close the issue
+
+**Output:** A fix on `{DEV_BRANCH}` with a regression test that guarantees the bug cannot return silently.
+
+---
+
 ## /solve-todo
 
-**What it does:** Takes a single backlog item through the full implementation pipeline — from analysis to a merged PR. This is where code actually gets written.
+**What it does:** Takes a single backlog item through the full implementation pipeline — from analysis to a merge into `{DEV_BRANCH}`. This is where code actually gets written.
 
 **When to use:** Resolving any item from the backlog, whether it came from `/review-and-plan` or `/new-feature`.
 
