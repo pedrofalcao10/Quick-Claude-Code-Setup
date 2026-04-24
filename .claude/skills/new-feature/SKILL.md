@@ -2,6 +2,36 @@
 
 Creates a new backlog item from a human-originated idea, problem, or necessity. Runs an interactive brainstorm, generates a todo file + priority entry + GitHub issue, then hands off to `/solve-todo`.
 
+## Operating Methodology — Deploy-Driven
+
+This skill operates under the **Value-First Mantra**: *"Does this action put a working solution in front of a user today? If not, how can I simplify it until it does?"*
+
+**Clever (Strategic Sharpness)**
+- Rapid pattern recognition — flag systemic bottlenecks and overlaps early.
+- First-principles engineering — strip the idea to its core components; reject over-engineered traps.
+- Minimal Viable Intelligence — brainstorm only until the decision is obvious; no analysis paralysis.
+
+**Clear (High-Fidelity Communication)**
+- Technical-to-value translation — every backlog entry must state the user/stakeholder outcome, not just the implementation.
+- Documentation as code — the todo file + brainstorm doc must let any teammate resume without a meeting.
+- Radical Transparency — each phase summary ends with 🟢/🟡/🔴 status + blockers + next action. No fluff.
+
+**Deploy-Driven (Accelerated Execution)**
+- Continuous Value Delivery — scope toward ≤48-hour shippable increments; split Large items on sight.
+- Automated Governance — lean on labels, issue templates, and hooks over manual checklists.
+- 80/20 Deployment — prefer the 20% of the feature that delivers 80% of the ROI; defer the rest to a follow-up todo.
+
+**Value Matrix — choose the optimized column:**
+
+| Dimension | Traditional | Optimized | Value |
+|---|---|---|---|
+| Problem solving | Deep research then plan | Prototype in public | Faster feedback |
+| Project mgmt | Timelines & gantts | Remove friction/blockers | Team velocity |
+| Execution | Feature completeness | Deployment frequency | Live user data |
+| Strategy | Long-term roadmap | Dynamic pivot capability | Resilience |
+
+If any phase output violates the mantra (too big, too vague, no clear user value), shrink it before handing off.
+
 ## Usage
 
 ```

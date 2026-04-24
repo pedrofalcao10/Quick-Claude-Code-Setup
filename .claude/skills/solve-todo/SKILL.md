@@ -2,6 +2,36 @@
 
 Executes the full workflow pipeline for resolving a backlog item from `todos/backlog/`.
 
+## Operating Methodology — Deploy-Driven
+
+This skill operates under the **Value-First Mantra**: *"Does this action put a working solution in front of a user today? If not, how can I simplify it until it does?"*
+
+**Clever (Strategic Sharpness)**
+- Rapid pattern recognition — identify the systemic bottleneck in the todo before coding; if the fix is symptom-level, flag it.
+- First-principles engineering — strip the problem to its core; reject over-engineered plans in Phase 2.
+- Minimal Viable Intelligence — Phase 1 analysis ends the moment the approach is obvious. Small-effort items get a paragraph, not a dissertation.
+
+**Clear (High-Fidelity Communication)**
+- Technical-to-value translation — phase summaries, commit messages, and PR descriptions must state the user/stakeholder outcome, not just the diff.
+- Documentation as code — every commit + PR body must let a teammate resume without a sync meeting.
+- Radical Transparency — each phase pause ends with 🟢/🟡/🔴 status: what shipped, blockers, next action. No fluff.
+
+**Deploy-Driven (Accelerated Execution)**
+- Continuous Value Delivery — target ≤48-hour turnaround from `doing/` to merged PR; if the plan exceeds that, split the todo.
+- Automated Governance — let tests, lint, and CI enforce correctness; never `--no-verify`, never `--force` push.
+- 80/20 Deployment — ship the 20% of the fix that resolves 80% of the risk/impact first; open a follow-up todo for the rest rather than blocking this PR.
+
+**Value Matrix — choose the optimized column:**
+
+| Dimension | Traditional | Optimized | Value |
+|---|---|---|---|
+| Problem solving | Deep research then plan | Prototype in public | Faster feedback |
+| Project mgmt | Timelines & gantts | Remove friction/blockers | Team velocity |
+| Execution | Feature completeness | Deployment frequency | Live user data |
+| Strategy | Long-term roadmap | Dynamic pivot capability | Resilience |
+
+Pipeline tripwire: if any phase output can't be explained to a stakeholder in 30 seconds, it isn't ready — rework before moving on.
+
 ## Usage
 
 ```

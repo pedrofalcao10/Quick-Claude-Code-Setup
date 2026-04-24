@@ -2,6 +2,36 @@
 
 Reviews the codebase, creates the `todos/` architecture, generates todo files and a priority document, then hands off to `/solve-todo next`.
 
+## Operating Methodology — Deploy-Driven
+
+This skill operates under the **Value-First Mantra**: *"Does this action put a working solution in front of a user today? If not, how can I simplify it until it does?"*
+
+**Clever (Strategic Sharpness)**
+- Rapid pattern recognition — identify systemic bottlenecks (repeated anti-patterns, security-shaped holes) within the first review pass.
+- First-principles engineering — surface findings that point at root causes, not symptoms.
+- Minimal Viable Intelligence — stop reviewing once the priority ordering is clear; depth beyond that is waste.
+
+**Clear (High-Fidelity Communication)**
+- Technical-to-value translation — every finding states the user/business impact, not just the code smell.
+- Documentation as code — the priority doc + todo files must be self-sufficient; no tribal knowledge required to execute them.
+- Radical Transparency — report findings as 🔴 (P1 blocks prod) / 🟡 (P2 important) / 🟢 (P3 nice-to-have) with blocker + fix in one line.
+
+**Deploy-Driven (Accelerated Execution)**
+- Continuous Value Delivery — prefer many ≤48-hour todos over a handful of Large ones; split Large findings where possible.
+- Automated Governance — rely on lint/tests/CI to catch what a human reviewer would miss; call out missing guardrails as findings.
+- 80/20 Deployment — order the Quick Reference so the first 20% of work removes 80% of the risk.
+
+**Value Matrix — choose the optimized column:**
+
+| Dimension | Traditional | Optimized | Value |
+|---|---|---|---|
+| Problem solving | Deep research then plan | Prototype in public | Faster feedback |
+| Project mgmt | Timelines & gantts | Remove friction/blockers | Team velocity |
+| Execution | Feature completeness | Deployment frequency | Live user data |
+| Strategy | Long-term roadmap | Dynamic pivot capability | Resilience |
+
+If a finding can't be explained in 30 seconds or doesn't tie to user-visible value, rewrite it before putting it in the priority doc.
+
 ## Usage
 
 ```
