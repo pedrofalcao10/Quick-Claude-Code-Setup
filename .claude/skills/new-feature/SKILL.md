@@ -65,9 +65,14 @@ If any phase output violates the mantra (too big, too vague, no clear user value
 
 4. **Validate prerequisites.** Check that `todos/backlog/`, `todos/doing/`, `todos/done/`, `todos/priority/` all exist AND that at least one priority file exists in `todos/priority/`. If missing, tell the user: "The todos/ architecture or priority document is missing. Run `/review-and-plan` first to set up the backlog structure, or confirm if you'd like me to create the directories now." Let the user decide.
 
-5. **Check for partial prior run.** Scan `todos/backlog/` for uncommitted files and `docs/brainstorms/` for recent (today) brainstorm docs matching the user's description topic. If found, ask: "A previous `/new-feature` run may have partially completed. Resume from existing artifacts, or start fresh (deletes partial artifacts)?"
+5. **Ensure `todos/` is local-only (gitignored).** The entire `todos/` tree is workflow state that must never leave the local machine.
+   - Check `.gitignore` for a line matching `todos/` (or `/todos/`). If missing, ask: "Add `todos/` to `.gitignore` so backlog/priority files stay local only?" If yes, append `todos/` to `.gitignore`.
+   - Check tracked files: `git ls-files todos/`. If any are listed, ask: "These `todos/` files are currently tracked in git. Untrack them so they become local-only?" If yes: `git rm -r --cached todos/` and commit with `chore: untrack todos/ (local-only workflow state)`.
+   - From this point forward, **never** run `git add todos/...`, `git mv todos/...`, or commit anything under `todos/`.
 
-6. **Scan for overlaps.** Read the `# Title` line from each todo file in `todos/backlog/`, `todos/doing/`, and `todos/done/`. Compare against the user's description: extract significant nouns and verbs (ignoring stop words like "the", "a", "add", "fix"), and report any todo where 2 or more significant words match. If potential overlaps are found:
+6. **Check for partial prior run.** Scan `todos/backlog/` for leftover files and `docs/brainstorms/` for recent (today) brainstorm docs matching the user's description topic. If found, ask: "A previous `/new-feature` run may have partially completed. Resume from existing artifacts, or start fresh (deletes partial artifacts)?"
+
+7. **Scan for overlaps.** Read the `# Title` line from each todo file in `todos/backlog/`, `todos/doing/`, and `todos/done/`. Compare against the user's description: extract significant nouns and verbs (ignoring stop words like "the", "a", "add", "fix"), and report any todo where 2 or more significant words match. If potential overlaps are found:
    - Report them: "These existing items look related: #{NNN} - {title}, #{NNN} - {title}"
    - Ask: "Continue with a new feature, or work on one of these existing items instead?"
    - If the user picks an existing item, invoke `/solve-todo {NUMBER}` and stop.
@@ -161,13 +166,15 @@ File: `todos/backlog/{NNN}-{pN}-{kebab-desc}.md`
 
 **Pause and show the user the backlog entry and the priority document updates for approval.**
 
-### Phase 3 — Commit
+### Phase 3 — Commit (brainstorm doc only)
 
-1. Stage the specific files created/modified: the backlog entry, the updated priority document, and the brainstorm requirements document.
-2. Ensure `{DEV_BRANCH}` branch is up to date: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
-3. If the work was done on a different branch, cherry-pick or merge the changes into `{DEV_BRANCH}`.
-4. Commit on `{DEV_BRANCH}`: `git commit -m "feat: add backlog item #{NNN} - {short desc}"`
-5. Switch back to `{DEV_BRANCH}` (stay on `{DEV_BRANCH}` for the handoff to `/solve-todo`).
+Everything under `todos/` is **local-only** (gitignored per Phase 0 step 5). The backlog entry and priority document updates stay on disk and are **never** staged or committed. Only the brainstorm requirements doc (`docs/brainstorms/...`) is committable.
+
+1. Ensure `{DEV_BRANCH}` branch is up to date: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
+2. Stage **only** the brainstorm requirements document: `git add docs/brainstorms/{file}`. Do **not** run `git add -A`, `git add .`, or `git add todos/...`.
+3. Verify nothing under `todos/` was staged: `git diff --cached --name-only | grep -v '^todos/'` (if any staged path starts with `todos/`, unstage it before continuing).
+4. Commit on `{DEV_BRANCH}`: `git commit -m "docs: add brainstorm for #{NNN} - {short desc}"`. Do not push yet — pushing happens in `/solve-todo` Phase 6 after the feature branch is merged back in.
+5. Stay on `{DEV_BRANCH}` for the handoff to `/solve-todo`.
 
 ### Phase 4 — Hand Off
 

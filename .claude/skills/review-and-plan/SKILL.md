@@ -61,9 +61,14 @@ If a finding can't be explained in 30 seconds or doesn't tie to user-visible val
    - Validate the branch exists locally or on remote. If it doesn't exist, ask: "Branch `{name}` doesn't exist yet. Create it from the current branch, or enter a different name?"
    - Use `{DEV_BRANCH}` for all subsequent references to the integration branch in this pipeline.
 
-3. **Check if `todos/` architecture exists.** Look for all four directories: `todos/backlog/`, `todos/doing/`, `todos/done/`, `todos/priority/`. Note which exist and which are missing.
+3. **Ensure `todos/` is local-only (gitignored).** The entire `todos/` tree is workflow state that must never leave the local machine.
+   - Check `.gitignore` for a line matching `todos/` (or `/todos/`). If missing, ask: "Add `todos/` to `.gitignore` so backlog/priority files stay local only?" If yes, append `todos/` to `.gitignore`.
+   - Check if any todos/ files are currently tracked: `git ls-files todos/`. If any are listed, ask: "These `todos/` files are currently tracked in git. Untrack them so they become local-only?" If yes: `git rm -r --cached todos/` and commit with `chore: untrack todos/ (local-only workflow state)`.
+   - From this point forward, **never** run `git add todos/...`, `git mv todos/...`, or commit anything under `todos/`.
 
-4. **Scan for existing state.** Check all three directories (`todos/backlog/`, `todos/doing/`, `todos/done/`) for `.md` todo files, and `todos/priority/` for priority documents.
+4. **Check if `todos/` architecture exists.** Look for all four directories: `todos/backlog/`, `todos/doing/`, `todos/done/`, `todos/priority/`. Note which exist and which are missing.
+
+5. **Scan for existing state.** Check all three directories (`todos/backlog/`, `todos/doing/`, `todos/done/`) for `.md` todo files, and `todos/priority/` for priority documents.
    - **Determine the next priority document number:** Count existing files in `todos/priority/` (e.g., if `000-priority-todos.md` exists, the next is `001`). The new priority document will be named `{NEXT_PRIORITY_NUMBER}-priority-todos.md`.
    - **Determine the next todo file number:** Find the highest `{NUMBER}` across all `.md` files in `backlog/`, `doing/`, and `done/`. New findings start from `highest + 1`. If no files exist anywhere, start from `001`.
    - **If existing todo files are found in `backlog/`** (items not yet solved):
@@ -73,7 +78,7 @@ If a finding can't be explained in 30 seconds or doesn't tie to user-visible val
      - **Overwrite:** Only deletes files in `todos/backlog/`. Files in `todos/doing/` and `todos/done/` are **never touched** (they represent in-progress or completed work). New findings still start from `highest + 1` across all directories to avoid number collisions.
    - **If no backlog files exist** (all previous items solved or fresh codebase): proceed normally. New findings start from `highest + 1` across `doing/` and `done/`, or from `001` if no files exist anywhere.
 
-5. **If any directories are missing:** proceed to Phase 1. Otherwise skip to Phase 2.
+6. **If any directories are missing:** proceed to Phase 1. Otherwise skip to Phase 2.
 
 ### Phase 1 — Create Architecture
 
@@ -207,15 +212,15 @@ The Quick Reference table must list ALL findings sorted by execution order. This
 
 **Pause and present the priority document to the user for final approval.**
 
-### Phase 5 — Commit & Hand Off
+### Phase 5 — Hand Off
 
-1. Ensure `{DEV_BRANCH}` is up to date: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`. If the work was done on a different branch, cherry-pick or merge the changes into `{DEV_BRANCH}`.
-2. Stage all new files in `todos/`.
-3. Commit on `{DEV_BRANCH}`: `git commit -m "chore: add code review findings for {scope}"` where `{scope}` is the path argument or "full codebase".
-4. Report a summary:
+Everything under `todos/` is **local-only** (gitignored per Phase 0 step 3). No git operations here — the backlog lives on disk, not in the remote.
+
+1. Report a summary:
    - Total findings by priority (P1/P2/P3)
    - Total estimated effort
-5. Ask the user: **"Ready to start solving? Run `/solve-todo next` to begin with the first item, or `/solve-todo {number}` to pick a specific one."**
+   - Reminder: "`todos/` is local-only and will never be pushed."
+2. Ask the user: **"Ready to start solving? Run `/solve-todo next` to begin with the first item, or `/solve-todo {number}` to pick a specific one."**
 
 If the user says yes or gives a number, invoke `/solve-todo` with the appropriate argument.
 

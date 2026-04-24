@@ -76,6 +76,13 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
    - Validate the branch exists locally or on remote. If it doesn't exist, ask: "Branch `{name}` doesn't exist yet. Create it from the current branch, or enter a different name?"
    - Use `{DEV_BRANCH}` for all subsequent references to the integration branch in this pipeline.
 
+7. **Ensure `todos/` is local-only (gitignored).** The entire `todos/` tree is workflow state that must never leave the local machine.
+   - Check `.gitignore` for a line matching `todos/` (or `/todos/`). If missing, ask: "Add `todos/` to `.gitignore` so backlog/priority files stay local only?" If yes, append `todos/` to `.gitignore`.
+   - Check tracked files: `git ls-files todos/`. If any are listed, ask: "These `todos/` files are currently tracked in git. Untrack them so they become local-only?" If yes: `git rm -r --cached todos/` and commit with `chore: untrack todos/ (local-only workflow state)`.
+   - From this point forward, **never** run `git add todos/...`, `git mv todos/...`, or commit anything under `todos/`.
+
+8. **Feature branches are local-only.** The feature branch created below (`{prefix}/{NUMBER}-...`) must **never** be pushed. The pipeline merges it into `{DEV_BRANCH}` locally in Phase 6 and then pushes `{DEV_BRANCH}`. No `git push` of the feature branch at any point. No `gh pr create`.
+
 **Main setup steps:**
 
 1. Read the todo file from `todos/backlog/{number}-*.md` to get all context.
@@ -102,11 +109,14 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
    - If it doesn't exist locally or remotely: `git checkout -b {DEV_BRANCH} && git push -u origin {DEV_BRANCH}`
    - If it exists only on remote: `git fetch origin {DEV_BRANCH} && git checkout -b {DEV_BRANCH} origin/{DEV_BRANCH}`
    - If it exists locally: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
-7. Create a feature branch from `{DEV_BRANCH}` (skip if branch already exists per pre-flight check 3):
+7. Create a **local-only** feature branch from `{DEV_BRANCH}` (skip if branch already exists per pre-flight check 3):
    - Command: `git checkout -b {prefix}/{NUMBER}-{kebab-case-short-desc}`
-8. Move the todo file to `doing/`: `git mv todos/backlog/{file} todos/doing/{file}`
-9. Update the status in `the latest priority file in todos/priority/` from `BACKLOG` to `DOING` for this item.
-10. Commit: `git commit -m "chore: start work on #{NUMBER}"`
+   - **Do NOT push this branch.** It stays local for the entire lifecycle.
+8. Move the todo file to `doing/` locally (no `git mv` — todos/ is gitignored):
+   - Unix/bash: `mv todos/backlog/{file} todos/doing/{file}`
+   - PowerShell: `Move-Item todos/backlog/{file} todos/doing/{file}`
+9. Update the status in the latest priority file in `todos/priority/` from `BACKLOG` to `DOING` for this item. **Do not commit** — `todos/` is gitignored.
+10. No commit here. The first commit on the feature branch happens in Phase 3 when real code changes exist.
 
 ### Phase 1 — Analysis
 
@@ -160,55 +170,58 @@ Document what was learned and any patterns that emerged. This compounds team kno
 
 For **Small effort** items: skip this phase unless something genuinely surprising was learned. A one-line CORS fix does not need a knowledge document.
 
-### Phase 6 — Finalize
+### Phase 6 — User Testing, Local Merge & Finalize
 
-1. Ensure all changes are committed on the feature branch.
-2. **User Testing Gate (MANDATORY PAUSE):**
-   - Present a summary of what was changed and how to test it (include test commands from Phase 2's plan and any manual testing steps).
-   - Ask: "All code changes are committed. Please test locally. When done, confirm:
-     (a) Everything works — proceed to PR
-     (b) Found issues — describe them and I'll go back to fix
-     (c) Abort — leave branch as-is for later"
+The feature branch is **local-only** and has never been pushed. Validation happens on the local feature branch before it is merged into `{DEV_BRANCH}` locally. Only `{DEV_BRANCH}` ever gets pushed.
+
+1. **Confirm the feature branch state:**
+   - Verify the current branch is `{prefix}/{NUMBER}-{kebab-case-short-desc}` (`git rev-parse --abbrev-ref HEAD`).
+   - Ensure all **code** changes are committed. (Anything under `todos/` is gitignored and must not be staged — `git status --porcelain | grep '^.. todos/'` must be empty before committing.)
+   - Verify the branch has no remote tracking / was never pushed: `git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>&1` should fail for this branch (if it succeeds, something pushed it earlier — stop and ask the user how to proceed).
+
+2. **User Testing Gate (MANDATORY PAUSE — do NOT merge or push until the user validates):**
+   - Present a summary of what was changed and how to test it on this local feature branch (test commands from Phase 2's plan + any manual steps).
+   - Ask: "You are on the local feature branch `{prefix}/{NUMBER}-...` — it has NOT been pushed and NOT merged. Please test everything here. When done, confirm:
+     (a) Everything works — merge this branch into `{DEV_BRANCH}` locally and push `{DEV_BRANCH}`
+     (b) Found issues — describe them and I'll go back to Phase 3 to fix
+     (c) Abort — leave the local feature branch as-is for later (nothing is pushed, nothing is merged)"
    - If (b): return to Phase 3 with the user's feedback. The same 3-iteration limit from the Phase 3/4 cycle applies.
-   - If (c): report current state (branch name, todo still in `doing/`), stop.
-3. Push the branch: `git push -u origin {prefix}/{NUMBER}-{kebab-case-short-desc}`
-   - If push fails: report the error clearly and do NOT proceed. The todo stays in `doing/`.
-4. Move the todo file: `git mv todos/doing/{file} todos/done/{file}`
-5. Update the status in `the latest priority file in todos/priority/` from `DOING` to `DONE` for this item.
-6. Commit the todo status change: `git commit -m "chore: mark #{NUMBER} as done"`
-7. Push the status commit: `git push`
-8. Create a Pull Request:
-   ```
-   gh pr create \
-     --base {DEV_BRANCH} \
-     --title "{prefix}: {PRIORITY}/{NUMBER} - {SHORT_DESC}" \
-     --body "$(cat <<'EOF'
-   ## Summary
+   - If (c): report current state (local branch name, todo still in `doing/`, nothing pushed), stop.
 
-   Closes #{ISSUE_NUMBER}
+3. **Move the todo locally** (no `git mv` — `todos/` is gitignored):
+   - Unix/bash: `mv todos/doing/{file} todos/done/{file}`
+   - PowerShell: `Move-Item todos/doing/{file} todos/done/{file}`
 
-   {Brief description of what was done and why}
+4. **Update the priority file status** from `DOING` to `DONE` for this item. **Do not commit** — `todos/` is gitignored.
 
-   ## Changes
-   {Bullet list of key changes}
+5. **Switch to `{DEV_BRANCH}` and update it:**
+   - `git checkout {DEV_BRANCH}`
+   - `git pull origin {DEV_BRANCH}`
+   - If the checkout or pull fails, stop and ask the user — do NOT proceed with the merge.
 
-   ## Test Plan
-   {How to verify the fix works}
+6. **Merge the feature branch into `{DEV_BRANCH}` locally (no push yet):**
+   - `git merge --no-ff {prefix}/{NUMBER}-{kebab-case-short-desc} -m "merge {prefix}: {PRIORITY}/{NUMBER} - {SHORT_DESC} (closes #{ISSUE_NUMBER})"`
+   - `--no-ff` preserves the feature branch as a logical unit in history.
+   - If the merge conflicts, stop and walk the user through resolution before continuing.
 
-   ---
-   Workflow: `/solve-todo {NUMBER}`
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)
-   EOF
-   )"
-   ```
-   - If PR creation fails: report the error and provide the exact `gh pr create` command for manual retry.
-9. Close the GitHub issue (since PRs target `{DEV_BRANCH}`, not the default branch, GitHub's auto-close via `Closes #` won't trigger):
-   ```
-   gh issue close {ISSUE_NUMBER} --comment "Resolved via PR #{PR_NUMBER}"
-   ```
-10. Report the PR URL and issue URL to the user.
-11. Switch back to the `{DEV_BRANCH}` branch: `git checkout {DEV_BRANCH}`
-    - If checkout fails: warn but do not treat as a pipeline failure (URLs already reported in step 10).
+7. **Push `{DEV_BRANCH}` (never the feature branch):**
+   - `git push origin {DEV_BRANCH}`
+   - **Never** `git push` the feature branch. Never use `--force`.
+   - If the push is rejected because the remote moved ahead, run `git pull --rebase origin {DEV_BRANCH}` and retry. If the rebase conflicts, stop and ask the user.
+
+8. **Delete the feature branch locally (it was never pushed, so there is no remote branch to delete):**
+   - `git branch -d {prefix}/{NUMBER}-{kebab-case-short-desc}`
+   - If git refuses with "not fully merged" (shouldn't happen after step 6), stop and ask the user — do **not** use `-D` without explicit approval.
+
+9. **Close the GitHub issue:**
+   - Capture the merge commit SHA: `MERGE_SHA=$(git rev-parse HEAD)`
+   - `gh issue close {ISSUE_NUMBER} --comment "Resolved in {DEV_BRANCH} at commit ${MERGE_SHA}"`
+
+10. Report to the user:
+    - `{DEV_BRANCH}` HEAD commit SHA and URL
+    - Issue URL (now closed)
+    - Confirmation that the local feature branch has been deleted
+    - Reminder: "`todos/` stayed local; only the code merge is on the remote."
 
 ## Error Handling
 
@@ -217,5 +230,8 @@ If any phase fails, report the error clearly and ask the user how to proceed. Ne
 ## Notes
 
 - Each todo file in `todos/backlog/` contains the full problem description and suggested fix.
-- The `{DEV_BRANCH}` is the integration branch (determined during Phase 0, pre-flight check 6) — all PRs target `{DEV_BRANCH}`, **never** `main` directly.
-- While pushing the branch, it must NEVER be done with the `--force` flag.
+- The `{DEV_BRANCH}` is the integration branch (determined during Phase 0, pre-flight check 6). The feature branch merges into `{DEV_BRANCH}` **locally**, then `{DEV_BRANCH}` is pushed — **never** `main` directly.
+- **`todos/` is local-only.** It is gitignored in Phase 0 step 7 and must never be staged, committed, or pushed. Status transitions (BACKLOG → DOING → DONE) happen via plain `mv` + in-place edits to the priority file, never `git mv` and never a commit.
+- **Feature branches are local-only.** The `{prefix}/{NUMBER}-...` branch is never pushed to the remote. It exists only to isolate changes until the user validates them, at which point Phase 6 merges it into `{DEV_BRANCH}` and deletes it with `git branch -d`.
+- **No pull requests.** The pipeline does not run `gh pr create`. Validation is a local test gate in Phase 6, and integration is a local `--no-ff` merge into `{DEV_BRANCH}`.
+- `git push` is **only** allowed for `{DEV_BRANCH}`, and **never** with `--force`.
