@@ -36,12 +36,10 @@ Pipeline tripwire: if a phase can't produce a reproducible failure, a named root
 
 ```
 /bug-fix <description>
-/bug-fix #<github-issue-number>
 /bug-fix
 ```
 
 - Pass a description of the observed bug (e.g., `/bug-fix PDF export crashes on orders with >100 line items`).
-- Pass `#<issue-number>` to start from an existing GitHub issue — the skill pulls the title and body.
 - With no argument: the skill asks for a description.
 
 ## Explicit Bug-Fix Rules (non-negotiable)
@@ -56,7 +54,7 @@ Pipeline tripwire: if a phase can't produce a reproducible failure, a named root
 ## Permission Rules (apply to ALL phases)
 
 - **ALLOW without asking:** All file reads, grep/search, glob, git status/log/diff/branch, running tests (`go test`, `npm test`, `vitest`, `jest`, etc.), build commands, lint commands
-- **PAUSE and ask user approval for:** Any file creation, file edit, file deletion, git commits, git checkout (branch switches), git merges, git push, GitHub mutations (`gh issue create`, `gh issue close`)
+- **PAUSE and ask user approval for:** Any file creation, file edit, file deletion, git commits, git checkout (branch switches), git merges, git push
 
 ## Rejection & Retry Policy
 
@@ -74,7 +72,7 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
 
 **Pre-flight checks (run before anything else):**
 
-1. **Validate input:** If no argument was provided, ask: "What's the bug? Describe the observed behavior, the expected behavior, and any reproduction steps or error messages you have." If an issue number was provided, run `gh issue view {NUMBER} --json title,body,labels` and use that as the description.
+1. **Validate input:** If no argument was provided, ask: "What's the bug? Describe the observed behavior, the expected behavior, and any reproduction steps or error messages you have."
 2. **Check working tree:** Run `git status --porcelain`. If there are uncommitted changes, warn and ask whether to stash, commit, or abort.
 3. **Determine development branch (`{DEV_BRANCH}`):**
    - Auto-detect: Run `git branch -a` and check for branches matching common integration branch names: `dev`, `develop`, `development`, `staging`, `next`.
@@ -108,7 +106,6 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
    - **Priority:** {P1 CRITICAL | P2 IMPORTANT | P3 NICE-TO-HAVE}
    - **Source:** Bug
    - **Files:** {`path/to/file.ext` or `TBD`}
-   - **Issue:** {filled after step 4}
 
    ## Observed Behavior
 
@@ -132,25 +129,18 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
    ```
 
 3. **Append to the latest priority file** in `todos/priority/` (no `git add` — gitignored). Add a row to the `### Bugs` section in both **Recommended Execution Order** and **Quick Reference**. If no `### Bugs` section exists, create one after the last existing section. Use `Order = max(existing Order across all tables) + 1`.
-4. **Create the GitHub issue** (skip if the user passed `#<issue-number>` and it already exists):
-   - Ensure labels exist: `gh label create "priority:{pN}" --force 2>/dev/null; gh label create "bug" --force 2>/dev/null`
-   - Title: `{PRIORITY}/{NUMBER} - {SHORT_DESC}`
-   - Body: the full content of the todo `.md` file
-   - Labels: `priority:{pN}`, `bug`
-   - Command: `gh issue create --title "..." --body "..." --label "..."`
-   - Capture the issue number and write it back into the todo file's `**Issue:**` line.
-5. **Ensure `{DEV_BRANCH}` exists and is current:**
+4. **Ensure `{DEV_BRANCH}` exists and is current:**
    - If it doesn't exist locally or remotely: `git checkout -b {DEV_BRANCH} && git push -u origin {DEV_BRANCH}`
    - If it exists only on remote: `git fetch origin {DEV_BRANCH} && git checkout -b {DEV_BRANCH} origin/{DEV_BRANCH}`
    - If it exists locally: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
-6. **Create a local-only feature branch from `{DEV_BRANCH}`:**
+5. **Create a local-only feature branch from `{DEV_BRANCH}`:**
    - `git checkout -b fix/{NUMBER}-{kebab-case-short-desc}`
    - **Do NOT push this branch.** It stays local for the entire lifecycle.
-7. **Move the todo to `doing/` locally** (no `git mv` — `todos/` is gitignored):
+6. **Move the todo to `doing/` locally** (no `git mv` — `todos/` is gitignored):
    - Unix/bash: `mv todos/backlog/{file} todos/doing/{file}`
    - PowerShell: `Move-Item todos/backlog/{file} todos/doing/{file}`
-8. **Update the status in the latest priority file** from `BACKLOG` to `DOING` for this item. **Do not commit** — `todos/` is gitignored.
-9. No commit here. The first commit on the feature branch happens in Phase 1 when the failing regression test lands.
+7. **Update the status in the latest priority file** from `BACKLOG` to `DOING` for this item. **Do not commit** — `todos/` is gitignored.
+8. No commit here. The first commit on the feature branch happens in Phase 1 when the failing regression test lands.
 
 ### Phase 1 — Reproduce (MANDATORY GATE)
 
@@ -265,7 +255,7 @@ The feature branch is **local-only** and has never been pushed. Validation happe
    - If the checkout or pull fails, stop and ask the user — do NOT proceed with the merge.
 
 6. **Merge the feature branch into `{DEV_BRANCH}` locally (no push yet):**
-   - `git merge --no-ff fix/{NUMBER}-{kebab-case-short-desc} -m "merge fix: {PRIORITY}/{NUMBER} - {SHORT_DESC} (closes #{ISSUE_NUMBER})"`
+   - `git merge --no-ff fix/{NUMBER}-{kebab-case-short-desc} -m "merge fix: {PRIORITY}/{NUMBER} - {SHORT_DESC}"`
    - `--no-ff` preserves the bug-fix branch as a logical unit in history.
    - If the merge conflicts, stop and walk the user through resolution before continuing.
 
@@ -278,13 +268,8 @@ The feature branch is **local-only** and has never been pushed. Validation happe
    - `git branch -d fix/{NUMBER}-{kebab-case-short-desc}`
    - If git refuses with "not fully merged" (shouldn't happen after step 6), stop and ask the user — do **not** use `-D` without explicit approval.
 
-9. **Close the GitHub issue:**
-   - Capture the merge commit SHA: `MERGE_SHA=$(git rev-parse HEAD)`
-   - `gh issue close {ISSUE_NUMBER} --comment "Fixed in {DEV_BRANCH} at commit ${MERGE_SHA}"`
-
-10. Report to the user:
+9. Report to the user:
     - `{DEV_BRANCH}` HEAD commit SHA and URL
-    - Issue URL (now closed)
     - Confirmation that the local feature branch has been deleted
     - One-line summary of the root cause and the fix
     - Reminder: "`todos/` stayed local; only the code merge is on the remote."

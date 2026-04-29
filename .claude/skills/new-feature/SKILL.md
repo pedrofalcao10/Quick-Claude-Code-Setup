@@ -1,6 +1,6 @@
 # new-feature
 
-Creates a new backlog item from a human-originated idea, problem, or necessity. Runs an interactive brainstorm, generates a todo file + priority entry + GitHub issue, then hands off to `/solve-todo`.
+Creates a new backlog item from a human-originated idea, problem, or necessity. Runs an interactive brainstorm, generates a todo file + priority entry, then hands off to `/solve-todo`.
 
 ## Operating Methodology — Deploy-Driven
 
@@ -45,7 +45,7 @@ If any phase output violates the mantra (too big, too vague, no clear user value
 ## Permission Rules (apply to ALL phases)
 
 - **ALLOW without asking:** All file reads, grep/search, glob, git status/log/diff/branch, running tests, build commands, lint commands
-- **PAUSE and ask user approval for:** Any file/directory creation, file edit, file deletion, git commits, git push, git checkout (branch switches), GitHub mutations (`gh issue create`, `gh pr create`)
+- **PAUSE and ask user approval for:** Any file/directory creation, file edit, file deletion, git commits, git push, git checkout (branch switches)
 
 ## Workflow
 
@@ -87,7 +87,7 @@ The brainstorm produces a requirements document at `docs/brainstorms/YYYY-MM-DD-
 
 **Exit path:** If the brainstorm concludes the idea should not be built (already exists, wrong approach, not worth the effort, conflicts with architecture), stop cleanly:
 - Report the brainstorm's conclusion and reasoning.
-- Do not create any todo file, priority entry, or GitHub issue.
+- Do not create any todo file or priority entry.
 - Say: "Brainstorm concluded this should not be built. No artifacts created."
 - Stop.
 
@@ -143,7 +143,6 @@ File: `todos/backlog/{NNN}-{pN}-{kebab-desc}.md`
 - **Files:** {`path/to/file.ext` or `TBD`}
 - **Brainstorm:** {`docs/brainstorms/YYYY-MM-DD-{topic}-requirements.md`}
 - **Priority File:** {`todos/priority/{LATEST_PRIORITY_NUMBER}-priority-todos.md`}
-- **Issue:** {`#{ISSUE_NUMBER}` — filled after Step 4}
 
 ## Problem
 
@@ -153,16 +152,6 @@ File: `todos/backlog/{NNN}-{pN}-{kebab-desc}.md`
 
 {The proposed approach — derived from the brainstorm's requirements and chosen approach.}
 ```
-
-**Step 4: Create GitHub issue**
-
-- Ensure labels exist: `gh label create "priority:{pN}" --force 2>/dev/null; gh label create "feature" --force 2>/dev/null`
-- Title: `{PRIORITY}/{NNN} - {SHORT_DESC}`
-- Body: The full content of the todo `.md` file
-- Labels: `priority:{pN}`, `feature`
-- Command: `gh issue create --title "..." --body "..." --label "..."`
-- Capture the issue number.
-- **Update the backlog file:** Replace `**Issue:** {placeholder}` with `**Issue:** #{ISSUE_NUMBER}` in the backlog `.md` file created in Step 3. This allows `/solve-todo` to find the existing issue directly instead of searching.
 
 **Pause and show the user the backlog entry and the priority document updates for approval.**
 
@@ -180,7 +169,6 @@ Everything under `todos/` is **local-only** (gitignored per Phase 0 step 5). The
 
 1. Report summary:
    - Todo: `#{NNN} - {title}` (Priority: {P}, Effort: {effort})
-   - Issue: `#{ISSUE_NUMBER}`
    - Brainstorm: `docs/brainstorms/{file}`
 2. Ask the user: **"Ready to start implementing? This will run `/solve-todo {NNN}`."**
    - If yes: invoke `/solve-todo {NNN}`

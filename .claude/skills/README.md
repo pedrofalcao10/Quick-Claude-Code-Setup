@@ -61,7 +61,7 @@ If a phase output can't be explained to a stakeholder in 30 seconds, it isn't re
 3. Runs a comprehensive code review (`/ce:review`)
 4. Generates individual todo files in `todos/backlog/`
 5. Generates a priority document with execution order and Quick Reference table
-6. Commits on the development branch and offers to start `/solve-todo next`
+6. Offers to start `/solve-todo next`
 
 **Handles re-runs:** Detects existing findings and offers to keep, overwrite, or abort. Numbering never collides across review cycles.
 
@@ -83,10 +83,9 @@ If a phase output can't be explained to a stakeholder in 30 seconds, it isn't re
 1. Validates prerequisites (requires `todos/` architecture and a priority document to exist)
 2. Scans for overlapping existing backlog items
 3. Runs `/ce:brainstorm` interactively to shape the idea into concrete requirements
-4. Creates a todo file with `Source: Feature`, a link to the brainstorm doc, and an `Issue` field
+4. Creates a todo file with `Source: Feature` and a link to the brainstorm doc
 5. Appends the new item to the latest existing priority document (Execution Order + Quick Reference)
-6. Creates a GitHub issue with `feature` label and writes the issue number back into the todo file
-7. Commits on the development branch (auto-detected or user-specified) and offers to start `/solve-todo {NNN}`
+6. Commits the brainstorm doc on the development branch (auto-detected or user-specified) and offers to start `/solve-todo {NNN}`
 
 **Exit path:** If the brainstorm concludes the idea shouldn't be built, stops cleanly with no artifacts created.
 
@@ -103,7 +102,6 @@ If a phase output can't be explained to a stakeholder in 30 seconds, it isn't re
 **Usage:**
 ```
 /bug-fix PDF export crashes on orders with >100 line items
-/bug-fix #42                        # start from an existing GitHub issue
 /bug-fix                            # will ask for a description
 ```
 
@@ -114,14 +112,14 @@ If a phase output can't be explained to a stakeholder in 30 seconds, it isn't re
 4. Smallest possible diff — no drive-by refactors; follow-up issues get their own todos.
 
 **What it does:**
-1. Pre-flight (working tree, dev branch, gitignore `todos/`, duplicate scan, create GitHub issue with `bug` label, create local-only `fix/{NNN}-...` branch, move todo to `doing/`)
+1. Pre-flight (working tree, dev branch, gitignore `todos/`, duplicate scan, create local-only `fix/{NNN}-...` branch, move todo to `doing/`)
 2. **Reproduce** — write a failing regression test (halts the pipeline if reproduction fails)
 3. **Root Cause** — `/ce:brainstorm` narrowly focused on why the test fails
 4. **Plan** — `/ce:plan` with the smallest possible diff; explicit "will NOT change" list
 5. **Implement** — `/ce:work` to make the failing test pass; add edge-case tests
 6. **Review** — `/ce:review` focused on regression surface, edge cases, and scope creep
 7. **Documentation** — `/ce:compound` for non-trivial root causes (skipped for trivial)
-8. **User Testing, Local Merge & Finalize** — mandatory test gate on the local branch, then `--no-ff` merge into `{DEV_BRANCH}`, push dev, delete local `fix/` branch, close issue
+8. **User Testing, Local Merge & Finalize** — mandatory test gate on the local branch, then `--no-ff` merge into `{DEV_BRANCH}`, push dev, delete local `fix/` branch
 
 ---
 
@@ -138,15 +136,15 @@ If a phase output can't be explained to a stakeholder in 30 seconds, it isn't re
 ```
 
 **What it does:**
-1. Pre-flight checks (input validation, clean working tree, existing branch/issue, dependencies)
-2. Creates a GitHub issue and feature branch from the development branch
+1. Pre-flight checks (input validation, clean working tree, existing branch, dependencies)
+2. Creates a local-only feature branch from the development branch
 3. Moves todo to `todos/doing/` (status: DOING)
 4. **Analysis** — reads brainstorm doc if linked (from `/new-feature`), otherwise runs `/ce:ideate` + `/ce:brainstorm`
 5. **Plan** — runs `/ce:plan` for implementation strategy
 6. **Implementation** — runs `/ce:work` to write code
 7. **Review** — runs `/ce:review` (max 3 fix iterations)
 8. **Documentation** — runs `/ce:compound` (skipped for small items)
-9. Moves todo to `todos/done/`, creates PR targeting the development branch, closes the GitHub issue
+9. Moves todo to `todos/done/`, merges the feature branch into the development branch locally, pushes the development branch
 
 **Branch prefixes:** Automatically chosen based on todo source:
 - `fix/` — security or bug fixes
@@ -197,14 +195,13 @@ If a phase output can't be explained to a stakeholder in 30 seconds, it isn't re
 |-----------|--------|---------|
 | Todo file | `{NNN}-{pN}-{kebab-desc}.md` | `029-p2-whatsapp-notifications.md` |
 | Priority doc | `{NNN}-priority-todos.md` | `000-priority-todos.md` |
-| GitHub issue | `{PRIORITY}/{NNN} - {desc}` | `P2/029 - WhatsApp notifications` |
 | Branch | `{prefix}/{NNN}-{kebab-desc}` | `feat/029-whatsapp-notifications` |
-| PR title | `{prefix}: {PRIORITY}/{NNN} - {desc}` | `feat: P2/029 - WhatsApp notifications` |
+| Merge commit | `merge {prefix}: {PRIORITY}/{NNN} - {desc}` | `merge feat: P2/029 - WhatsApp notifications` |
 
 ## Permissions (all skills)
 
 - **Freely allowed:** File reads, code search, tests, builds, lints, git read operations
-- **Requires approval:** File writes, git commits/push/checkout, GitHub issue/PR creation
+- **Requires approval:** File writes, git commits/push/checkout
 
 ## Directory Structure
 

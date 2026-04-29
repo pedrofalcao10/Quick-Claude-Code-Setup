@@ -45,7 +45,7 @@ Pipeline tripwire: if any phase output can't be explained to a stakeholder in 30
 ## Permission Rules (apply to ALL phases)
 
 - **ALLOW without asking:** All file reads, grep/search, glob, git status/log/diff/branch, running tests (`go test`, `npm test`, `vitest`, `jest`, etc.), build commands, lint commands
-- **PAUSE and ask user approval for:** Any file creation, file edit, file deletion, git commits, git push, git checkout (branch switches), GitHub mutations (`gh issue create`, `gh pr create`)
+- **PAUSE and ask user approval for:** Any file creation, file edit, file deletion, git commits, git push, git checkout (branch switches)
 
 ## Rejection & Retry Policy
 
@@ -66,9 +66,8 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
 1. **Validate input:** If no argument was provided, ask the user for a todo number or `next`. If a number was given, verify the file `todos/backlog/{number}-*.md` exists. If the file is not found, check `todos/doing/` and `todos/done/` — if found there, report the item's current status and stop. If not found anywhere, report "todo not found" and stop.
 2. **Check working tree:** Run `git status --porcelain`. If there are uncommitted changes, warn the user and ask whether to stash, commit, or abort before continuing.
 3. **Check for existing branch:** Run `git branch --list 'fix/{NUMBER}-*' 'refactor/{NUMBER}-*' 'test/{NUMBER}-*' 'chore/{NUMBER}-*' 'feat/{NUMBER}-*'`. If a branch already exists for this todo (any prefix), ask the user: "A branch for this todo already exists. Switch to it and resume, or delete it and start fresh?"
-4. **Check for existing issue:** First, check if the todo file contains an `**Issue:** #{NUMBER}` field — if so, reuse that issue number directly. Otherwise, run `gh issue list --search "{PRIORITY}/{NUMBER}" --state open`. If a matching issue already exists, reuse its number instead of creating a new one.
-5. **Check dependencies:** Read the **Quick Reference** table's Dependencies column for this todo. If any dependency is still `BACKLOG` or `DOING` (check their Status in the same table), warn: "Warning: #{DEP_NUMBER} ({dep description}) is not done yet. This todo depends on it. Continue anyway?" Let the user decide.
-6. **Determine development branch (`{DEV_BRANCH}`):**
+4. **Check dependencies:** Read the **Quick Reference** table's Dependencies column for this todo. If any dependency is still `BACKLOG` or `DOING` (check their Status in the same table), warn: "Warning: #{DEP_NUMBER} ({dep description}) is not done yet. This todo depends on it. Continue anyway?" Let the user decide.
+5. **Determine development branch (`{DEV_BRANCH}`):**
    - Auto-detect: Run `git branch -a` and check for branches matching common integration branch names: `dev`, `develop`, `development`, `staging`, `next`.
    - If exactly one match is found: announce "Detected development branch: `{name}`. Using this as the integration branch. Say 'no' to override." Use it as `{DEV_BRANCH}`.
    - If multiple matches are found: ask the user which one to use.
@@ -99,24 +98,18 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
    - New feature (Source: Feature) → `feat/`
    - Default → `fix/`
    - Branch name: `{prefix}/{NUMBER}-{kebab-case-short-desc}` (e.g., `fix/002-wildcard-cors`, `refactor/016-service-layer`, `feat/029-whatsapp-notifications`)
-5. Create a GitHub issue (skip if one already exists per pre-flight check 4):
-   - **Title:** `{PRIORITY}/{NUMBER} - {SHORT_DESC}` (e.g., `P1/002 - wildcard CORS config`)
-   - **Body:** The full content of the todo `.md` file (problem + fix sections)
-   - **Labels:** Add `priority:{PRIORITY}` label if it exists, otherwise create it
-   - Command: `gh issue create --title "..." --body "..." --label "..."`
-   - Capture the issue number from the output.
-6. Ensure the `{DEV_BRANCH}` branch exists:
+5. Ensure the `{DEV_BRANCH}` branch exists:
    - If it doesn't exist locally or remotely: `git checkout -b {DEV_BRANCH} && git push -u origin {DEV_BRANCH}`
    - If it exists only on remote: `git fetch origin {DEV_BRANCH} && git checkout -b {DEV_BRANCH} origin/{DEV_BRANCH}`
    - If it exists locally: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
-7. Create a **local-only** feature branch from `{DEV_BRANCH}` (skip if branch already exists per pre-flight check 3):
+6. Create a **local-only** feature branch from `{DEV_BRANCH}` (skip if branch already exists per pre-flight check 3):
    - Command: `git checkout -b {prefix}/{NUMBER}-{kebab-case-short-desc}`
    - **Do NOT push this branch.** It stays local for the entire lifecycle.
-8. Move the todo file to `doing/` locally (no `git mv` — todos/ is gitignored):
+7. Move the todo file to `doing/` locally (no `git mv` — todos/ is gitignored):
    - Unix/bash: `mv todos/backlog/{file} todos/doing/{file}`
    - PowerShell: `Move-Item todos/backlog/{file} todos/doing/{file}`
-9. Update the status in the latest priority file in `todos/priority/` from `BACKLOG` to `DOING` for this item. **Do not commit** — `todos/` is gitignored.
-10. No commit here. The first commit on the feature branch happens in Phase 3 when real code changes exist.
+8. Update the status in the latest priority file in `todos/priority/` from `BACKLOG` to `DOING` for this item. **Do not commit** — `todos/` is gitignored.
+9. No commit here. The first commit on the feature branch happens in Phase 3 when real code changes exist.
 
 ### Phase 1 — Analysis
 
@@ -200,7 +193,7 @@ The feature branch is **local-only** and has never been pushed. Validation happe
    - If the checkout or pull fails, stop and ask the user — do NOT proceed with the merge.
 
 6. **Merge the feature branch into `{DEV_BRANCH}` locally (no push yet):**
-   - `git merge --no-ff {prefix}/{NUMBER}-{kebab-case-short-desc} -m "merge {prefix}: {PRIORITY}/{NUMBER} - {SHORT_DESC} (closes #{ISSUE_NUMBER})"`
+   - `git merge --no-ff {prefix}/{NUMBER}-{kebab-case-short-desc} -m "merge {prefix}: {PRIORITY}/{NUMBER} - {SHORT_DESC}"`
    - `--no-ff` preserves the feature branch as a logical unit in history.
    - If the merge conflicts, stop and walk the user through resolution before continuing.
 
@@ -213,13 +206,8 @@ The feature branch is **local-only** and has never been pushed. Validation happe
    - `git branch -d {prefix}/{NUMBER}-{kebab-case-short-desc}`
    - If git refuses with "not fully merged" (shouldn't happen after step 6), stop and ask the user — do **not** use `-D` without explicit approval.
 
-9. **Close the GitHub issue:**
-   - Capture the merge commit SHA: `MERGE_SHA=$(git rev-parse HEAD)`
-   - `gh issue close {ISSUE_NUMBER} --comment "Resolved in {DEV_BRANCH} at commit ${MERGE_SHA}"`
-
-10. Report to the user:
+9. Report to the user:
     - `{DEV_BRANCH}` HEAD commit SHA and URL
-    - Issue URL (now closed)
     - Confirmation that the local feature branch has been deleted
     - Reminder: "`todos/` stayed local; only the code merge is on the remote."
 

@@ -45,7 +45,7 @@ If a finding can't be explained in 30 seconds or doesn't tie to user-visible val
 ## Permission Rules (apply to ALL phases)
 
 - **ALLOW without asking:** All file reads, grep/search, glob, git status/log/diff/branch, running tests, build commands, lint commands
-- **PAUSE and ask user approval for:** Any file/directory creation, file edit, file deletion, git commits, git push, git checkout (branch switches), GitHub mutations (`gh issue create`, `gh pr create`)
+- **PAUSE and ask user approval for:** Any file/directory creation, file edit, file deletion, git commits, git push, git checkout (branch switches)
 
 ## Workflow
 
