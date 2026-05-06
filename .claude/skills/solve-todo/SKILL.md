@@ -172,14 +172,30 @@ The feature branch is **local-only** and has never been pushed. Validation happe
    - Ensure all **code** changes are committed. (Anything under `todos/` is gitignored and must not be staged — `git status --porcelain | grep '^.. todos/'` must be empty before committing.)
    - Verify the branch has no remote tracking / was never pushed: `git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>&1` should fail for this branch (if it succeeds, something pushed it earlier — stop and ask the user how to proceed).
 
-2. **User Testing Gate (MANDATORY PAUSE — do NOT merge or push until the user validates):**
-   - Present a summary of what was changed and how to test it on this local feature branch (test commands from Phase 2's plan + any manual steps).
-   - Ask: "You are on the local feature branch `{prefix}/{NUMBER}-...` — it has NOT been pushed and NOT merged. Please test everything here. When done, confirm:
-     (a) Everything works — merge this branch into `{DEV_BRANCH}` locally and push `{DEV_BRANCH}`
-     (b) Found issues — describe them and I'll go back to Phase 3 to fix
-     (c) Abort — leave the local feature branch as-is for later (nothing is pushed, nothing is merged)"
-   - If (b): return to Phase 3 with the user's feedback. The same 3-iteration limit from the Phase 3/4 cycle applies.
-   - If (c): report current state (local branch name, todo still in `doing/`, nothing pushed), stop.
+2. **Validation Gate (Claude-driven by default — user only tests visual changes or after automation gaps/failures):**
+
+   Claude runs the gate. The user is asked to test **only** in two cases:
+   - **(V) Visual/UI change:** the diff touches anything users see rendered (frontend components, styles, layout, template copy, emails, PDFs). Automation can't verify appearance.
+   - **(F) Automation insufficient or failing:** no tests cover the modified path, coverage is partial, or any automated check failed.
+
+   **Step A — Run automated checks:**
+   - Execute the relevant suite for the changed paths: unit/integration/e2e tests, type checks, lint, and build (whichever the project uses).
+   - Report what ran and the result for each check.
+
+   **Step B — Decide the path:**
+   - **Auto-pass path** (no visual change AND every automated check passed AND coverage is adequate for the modified code): announce "Automated validation passed; no visual changes detected. Proceeding to local merge." and continue to step 3 without pausing the user.
+   - **User-test path** (case V or case F applies): pause and ask:
+     > "You are on the local feature branch `{prefix}/{NUMBER}-...` — it has NOT been pushed and NOT merged. Reason for manual testing: {visual change | failing automated check | missing automated coverage for {path}}. Please verify on this branch. When done, confirm:
+     > (a) Everything works — merge into `{DEV_BRANCH}` locally and push `{DEV_BRANCH}`
+     > (b) Found issues — describe them and I'll go back to Phase 3 to fix; you'll re-test after the fix
+     > (c) Abort — leave the local feature branch as-is (nothing is pushed, nothing is merged)"
+
+   **Step C — Handle outcomes:**
+   - Auto-pass or (a): proceed to step 3.
+   - (b): return to Phase 3 with the feedback, fix, and re-enter this gate. The same 3-iteration limit from the Phase 3/4 cycle applies. After Claude's fix, the user re-tests the affected area before merge.
+   - (c): report current state (local branch name, todo still in `doing/`, nothing pushed) and stop.
+
+   **If a problem surfaces after a Claude-driven auto-pass merge** (e.g., user notices a regression on `{DEV_BRANCH}`): treat it as a new bug — open via `/bug-fix`. Do not silently re-merge.
 
 3. **Move the todo locally** (no `git mv` — `todos/` is gitignored):
    - Unix/bash: `mv todos/doing/{file} todos/done/{file}`

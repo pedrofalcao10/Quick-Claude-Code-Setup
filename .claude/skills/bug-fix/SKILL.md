@@ -49,7 +49,7 @@ Pipeline tripwire: if a phase can't produce a reproducible failure, a named root
 3. **Every fix ships with a regression test.** Phase 1 writes a failing test; Phase 4 makes it pass. The test must fail on the pre-fix code and pass on the post-fix code. No regression test → no merge.
 4. **Smallest possible diff.** Change only what's required to fix the bug. No drive-by refactors, no renames, no formatting sweeps in unrelated files. If you spot adjacent issues, file them as new todos via `/new-feature` or `/review-and-plan`, don't fold them in.
 5. **Todos and feature branches are local-only.** Same rules as `/solve-todo`: `todos/` is gitignored, the `fix/{NUMBER}-...` branch is never pushed, only `{DEV_BRANCH}` is ever pushed — never with `--force`.
-6. **User testing is a hard gate.** The local `fix/...` branch is not merged into `{DEV_BRANCH}` until the user has manually validated the fix on that branch.
+6. **The regression test is the hard gate; user testing is conditional.** The failing-then-passing regression test from Phase 1/4 is the non-negotiable gate. Claude drives the validation gate in Phase 7: if automated checks pass and the fix has no visual surface, Claude merges without pausing. The user is asked to test only when the bug or fix has a visual/UI component, or when automated tests are missing or fail. If anything breaks, Claude fixes and the user re-tests the fix.
 
 ## Permission Rules (apply to ALL phases)
 
@@ -234,14 +234,31 @@ The feature branch is **local-only** and has never been pushed. Validation happe
    - Ensure all **code** changes are committed. (Anything under `todos/` is gitignored and must not be staged — `git status --porcelain | grep '^.. todos/'` must be empty before committing.)
    - Verify the branch has no remote tracking / was never pushed: `git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>&1` should fail for this branch (if it succeeds, something pushed it earlier — stop and ask the user how to proceed).
 
-2. **User Testing Gate (MANDATORY PAUSE — do NOT merge or push until the user validates):**
-   - Present a summary: the bug, the reproduction, the root cause, the fix, the regression test(s), and how to manually verify on this local feature branch.
-   - Ask: "You are on the local feature branch `fix/{NUMBER}-...` — it has NOT been pushed and NOT merged. Please reproduce the original bug scenario and confirm it's fixed. When done, confirm:
-     (a) Bug is fixed — merge this branch into `{DEV_BRANCH}` locally and push `{DEV_BRANCH}`
-     (b) Bug still reproduces (or a new issue surfaced) — describe it and I'll go back to Phase 4 to fix
-     (c) Abort — leave the local feature branch as-is for later (nothing is pushed, nothing is merged)"
-   - If (b): return to Phase 4 with the user's feedback. The same 3-iteration limit from the Phase 4/5 cycle applies.
-   - If (c): report current state (local branch name, todo still in `doing/`, nothing pushed), stop.
+2. **Validation Gate (Claude-driven by default — user only tests visual changes or after automation gaps/failures):**
+
+   The regression test from Phase 1/4 is the primary gate and must pass on the post-fix code. The user is asked to test **only** in two cases:
+   - **(V) Visual/UI bug or fix:** the bug manifests visually (frontend rendering, styles, layout, email/PDF output, template copy) or the fix touches visual surface. Automation can't verify appearance.
+   - **(F) Automation insufficient or failing:** the regression test alone doesn't exercise the user-reported scenario, broader coverage is missing, or any automated check fails.
+
+   **Step A — Run automated checks:**
+   - Confirm the Phase 1 regression test now passes on this branch.
+   - Run the full relevant suite: unit/integration/e2e tests for the affected modules, type checks, lint, and build (whichever the project uses).
+   - Report what ran and the result for each check.
+
+   **Step B — Decide the path:**
+   - **Auto-pass path** (regression test passes, no visual surface, every automated check passes, scenario adequately covered by tests): announce "Regression test and automated suite passed; bug scenario is fully covered by automation. Proceeding to local merge." and continue to step 3 without pausing the user.
+   - **User-test path** (case V or case F applies): pause and ask:
+     > "You are on the local feature branch `fix/{NUMBER}-...` — it has NOT been pushed and NOT merged. Reason for manual testing: {visual fix | regression test alone doesn't reproduce the user-reported scenario | failing automated check | missing automated coverage for {path}}. Please reproduce the original bug scenario and confirm it's fixed. When done, confirm:
+     > (a) Bug is fixed — merge into `{DEV_BRANCH}` locally and push `{DEV_BRANCH}`
+     > (b) Bug still reproduces (or a new issue surfaced) — describe it and I'll go back to Phase 4 to fix; you'll re-test after the fix
+     > (c) Abort — leave the local feature branch as-is (nothing is pushed, nothing is merged)"
+
+   **Step C — Handle outcomes:**
+   - Auto-pass or (a): proceed to step 3.
+   - (b): return to Phase 4 with the feedback, fix, and re-enter this gate. The same 3-iteration limit from the Phase 4/5 cycle applies. After Claude's fix, the user re-tests the affected area before merge.
+   - (c): report current state (local branch name, todo still in `doing/`, nothing pushed) and stop.
+
+   **If the bug reappears after a Claude-driven auto-pass merge:** treat it as a new bug report and open a fresh `/bug-fix` cycle. Do not silently re-merge.
 
 3. **Move the todo locally** (no `git mv` — `todos/` is gitignored):
    - Unix/bash: `mv todos/doing/{file} todos/done/{file}`
