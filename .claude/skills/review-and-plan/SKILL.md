@@ -185,6 +185,8 @@ Then, for each priority level (P1, P2, P3), generate a section with all findings
 
 Then generate the **Recommended Execution Order** as a single flat table. Order by: security impact first, then dependencies, then effort-to-value ratio.
 
+**Conflict-aware ordering** (see the *Branches vs Worktrees* guide, `decision.md`): the execution order doubles as parallelization guidance — `/solve-todo` may run independent items in parallel worktrees. Two findings can be parallelized safely only if they touch **different modules**. When two findings touch the **same shared files** (large route files, a shared API client) or both add **migration files**, they will collide on merge — encode that as a **dependency** (later item depends on the earlier one) so they run sequentially. **Migration-number collisions are non-negotiable:** never order two migration-adding findings as parallel-safe; one would have to be renumbered and a wrong number corrupts the boot-time migration runner.
+
 ```markdown
 ## Recommended Execution Order
 
@@ -208,7 +210,7 @@ Finally, generate the **Quick Reference** table (used by `/solve-todo next`):
 | {order} | {todo#} | {short title} | {P1/P2/P3} | {effort} | {None or #dep} | BACKLOG |
 ```
 
-The Quick Reference table must list ALL findings sorted by execution order. This is the table that `/solve-todo next` parses. It includes a Dependencies column so `/solve-todo` does not need to cross-reference other tables.
+The Quick Reference table must list ALL findings sorted by execution order. This is the table that `/solve-todo next` parses. It includes a Dependencies column so `/solve-todo` does not need to cross-reference other tables. Populate Dependencies with any **conflict-derived** sequencing from the conflict-aware ordering above (a finding that shares files or migrations with an earlier one lists that `#{NNN}` as a dependency), not just logical prerequisites — this is what keeps `/solve-todo` from running colliding items in parallel worktrees.
 
 **Pause and present the priority document to the user for final approval.**
 

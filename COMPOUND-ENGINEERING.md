@@ -101,12 +101,15 @@ These two alone significantly improve the quality and reusability of your work o
 
 ## Custom Skills (built on top of this plugin)
 
-This repo includes three custom skills in `.claude/skills/` that chain the `/ce:*` commands above into end-to-end workflows:
+This repo includes four custom skills in `.claude/skills/` that chain the `/ce:*` commands above into end-to-end workflows. They run **local-only** — no remote feature branches, no PRs; integration is a local `--no-ff` merge into the development branch:
 
 | Skill | What it does |
 |-------|-------------|
 | `/review-and-plan` | Reviews codebase → creates `todos/` backlog → generates priority doc → hands off to `/solve-todo` |
-| `/new-feature` | Interactive brainstorm → creates one backlog item + GitHub issue → hands off to `/solve-todo` |
-| `/solve-todo` | Picks a todo → analysis → plan → implement → review → PR (full pipeline) |
+| `/new-feature` | Interactive brainstorm → creates one backlog item → hands off to `/solve-todo` |
+| `/bug-fix` | Reproduce → root-cause → fix + regression test → local merge into the dev branch |
+| `/solve-todo` | Picks a todo → analysis → plan → implement → review → local merge (full pipeline) |
+
+The branch-vs-worktree call and parallel-merge handling these skills share is documented in the [Branches vs Worktrees decision guide](decision.md).
 
 See [`custom-skills.md`](custom-skills.md) for full documentation, or browse the skill definitions directly in [`.claude/skills/`](.claude/skills/).

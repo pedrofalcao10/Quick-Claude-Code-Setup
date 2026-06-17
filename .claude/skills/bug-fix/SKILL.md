@@ -90,6 +90,10 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
 7. **Check for partial prior run / duplicates.** Scan `todos/backlog/`, `todos/doing/`, and `todos/done/` for any existing todo whose title contains the same significant nouns/verbs as the user's description. If overlaps are found:
    - Report them: "These existing items look related: #{NNN} - {title}, ..."
    - Ask: "Continue with a new bug-fix, resume work on one of these existing items (`/solve-todo {NUMBER}`), or abort?"
+8. **Decide branch-only vs branch + worktree** (full rationale in the *Branches vs Worktrees* guide, `decision.md` at the repo root):
+   - **Default: branch only.** A bug fix is one focused unit of work; a plain local `fix/` branch is right for almost every run.
+   - **Use a worktree when a hotfix interrupts a long-running feature** — the canonical worktree case (decision.md "Decision 1"). If there's a feature mid-flight in `todos/doing/` (or uncommitted feature work you stashed in pre-flight step 2) and you need it to stay physically untouched while you fix this bug, create the `fix/` branch in a dedicated worktree (main setup step 5) instead of switching the working dir away from the feature.
+   - **Check for conflicts before going parallel:** if the fix touches the **same shared files** as the in-flight feature, or both add **migration files**, expect a merge conflict later — fix sequentially if you can. **Always pause on migration-number collisions** (two items adding the same `mig 0XX`): they corrupt the boot-time migration runner and one must be renumbered.
 
 **Main setup steps:**
 
@@ -133,8 +137,9 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
    - If it doesn't exist locally or remotely: `git checkout -b {DEV_BRANCH} && git push -u origin {DEV_BRANCH}`
    - If it exists only on remote: `git fetch origin {DEV_BRANCH} && git checkout -b {DEV_BRANCH} origin/{DEV_BRANCH}`
    - If it exists locally: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
-5. **Create a local-only feature branch from `{DEV_BRANCH}`:**
-   - `git checkout -b fix/{NUMBER}-{kebab-case-short-desc}`
+5. **Create a local-only feature branch from `{DEV_BRANCH}`.** Use the form chosen in pre-flight check 8:
+   - **Branch only (default):** `git checkout -b fix/{NUMBER}-{kebab-case-short-desc}`
+   - **Branch + worktree (hotfix while a feature is in flight):** from the main repo dir, `git worktree add ../{repo}-{NUMBER}-{kebab-case-short-desc} -b fix/{NUMBER}-{kebab-case-short-desc} {DEV_BRANCH}`, then run the rest of the pipeline from that folder. The feature's working dir stays untouched. Note: worktrees share one database and one `.env` — if this fix or the feature touches migrations/schema, run only one dev server against the DB at a time.
    - **Do NOT push this branch.** It stays local for the entire lifecycle.
 6. **Move the todo to `doing/` locally** (no `git mv` — `todos/` is gitignored):
    - Unix/bash: `mv todos/backlog/{file} todos/doing/{file}`
@@ -282,8 +287,10 @@ The feature branch is **local-only** and has never been pushed. Validation happe
    - If the push is rejected because the remote moved ahead, run `git pull --rebase origin {DEV_BRANCH}` and retry. If the rebase conflicts, stop and ask the user.
 
 8. **Delete the feature branch locally** (it was never pushed, so there is no remote branch to delete):
+   - If a **worktree** was used, remove it first (a branch checked out in a worktree can't be deleted): `git worktree remove ../{repo}-{NUMBER}-{kebab-case-short-desc}`. Run the merge/delete steps from the main repo dir.
    - `git branch -d fix/{NUMBER}-{kebab-case-short-desc}`
    - If git refuses with "not fully merged" (shouldn't happen after step 6), stop and ask the user — do **not** use `-D` without explicit approval.
+   - If a feature was in flight in a parallel worktree, after this fix lands on `{DEV_BRANCH}` pull `{DEV_BRANCH}` *into* that feature branch and resolve conflicts inside its own worktree (decision.md "Merging TWO parallel features") — don't leave the feature to discover the conflict later.
 
 9. Report to the user:
     - `{DEV_BRANCH}` HEAD commit SHA and URL
@@ -305,3 +312,4 @@ If any phase fails, report the error clearly and ask the user how to proceed. Ne
 - **No pull requests.** The pipeline does not run `gh pr create`. Validation is a local test gate in Phase 7, and integration is a local `--no-ff` merge into `{DEV_BRANCH}`.
 - `git push` is **only** allowed for `{DEV_BRANCH}`, and **never** with `--force`.
 - The regression test is the contract: it proves the bug existed, proves the fix works, and prevents the bug from returning. Every bug fix ships with one.
+- **Branch vs worktree** is decided in Phase 0 pre-flight check 8 per the *Branches vs Worktrees* guide (`decision.md`). Default to a plain `fix/` branch; reach for a worktree only when the hotfix must run alongside a long-running feature that should stay untouched. Same-file or migration-number overlaps → sequential, not parallel. Conflicts mean both sides edited the same lines — read both, pick the right code, delete the `<<<<<<< ======= >>>>>>>` markers, then `git add` + `git commit`; `git merge --abort` is the escape hatch.

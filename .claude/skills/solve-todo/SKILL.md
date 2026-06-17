@@ -75,6 +75,12 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
    - Validate the branch exists locally or on remote. If it doesn't exist, ask: "Branch `{name}` doesn't exist yet. Create it from the current branch, or enter a different name?"
    - Use `{DEV_BRANCH}` for all subsequent references to the integration branch in this pipeline.
 
+6. **Decide branch-only vs branch + worktree** (full rationale in the *Branches vs Worktrees* guide, `decision.md` at the repo root):
+   - **Default: branch only.** `/solve-todo` resolves one item at a time, so a plain local feature branch is the right choice for almost every run. Don't reach for a worktree because it sounds powerful.
+   - **Use a worktree only when** this todo's work must be *physically alive at the same time* as other in-progress work — e.g., another todo is mid-flight in `todos/doing/` and you want to bounce between them or run both dev servers at once. If so, create the branch inside a dedicated worktree in main setup step 6 and run this pipeline from that folder in a separate session.
+   - **Before going parallel, check for conflicts** (decision.md "Decision 2"): if this todo and the other in-flight work touch the **same shared files** (large route files, a shared API client) or both add **migration files**, prefer sequential branches — parallel worktrees will collide on merge. **Always pause on migration-number collisions** (two items adding the same `mig 0XX`): they corrupt the boot-time migration runner and one must be renumbered.
+   - When unsure, choose branch only. Worktrees only earn their keep when sequential genuinely doesn't work.
+
 7. **Ensure `todos/` is local-only (gitignored).** The entire `todos/` tree is workflow state that must never leave the local machine.
    - Check `.gitignore` for a line matching `todos/` (or `/todos/`). If missing, ask: "Add `todos/` to `.gitignore` so backlog/priority files stay local only?" If yes, append `todos/` to `.gitignore`.
    - Check tracked files: `git ls-files todos/`. If any are listed, ask: "These `todos/` files are currently tracked in git. Untrack them so they become local-only?" If yes: `git rm -r --cached todos/` and commit with `chore: untrack todos/ (local-only workflow state)`.
@@ -102,8 +108,9 @@ Execute each phase **in strict order**. After each skill phase, pause and summar
    - If it doesn't exist locally or remotely: `git checkout -b {DEV_BRANCH} && git push -u origin {DEV_BRANCH}`
    - If it exists only on remote: `git fetch origin {DEV_BRANCH} && git checkout -b {DEV_BRANCH} origin/{DEV_BRANCH}`
    - If it exists locally: `git checkout {DEV_BRANCH} && git pull origin {DEV_BRANCH}`
-6. Create a **local-only** feature branch from `{DEV_BRANCH}` (skip if branch already exists per pre-flight check 3):
-   - Command: `git checkout -b {prefix}/{NUMBER}-{kebab-case-short-desc}`
+6. Create a **local-only** feature branch from `{DEV_BRANCH}` (skip if branch already exists per pre-flight check 3). Use the form chosen in pre-flight check 6:
+   - **Branch only (default):** `git checkout -b {prefix}/{NUMBER}-{kebab-case-short-desc}`
+   - **Branch + worktree (only if parallel work demands it):** from the main repo dir, `git worktree add ../{repo}-{NUMBER}-{kebab-case-short-desc} -b {prefix}/{NUMBER}-{kebab-case-short-desc} {DEV_BRANCH}`, then continue the pipeline from that new folder. Note: parallel worktrees share one database and one `.env` — if either this todo or the parallel work touches migrations/schema, run only one dev server against the DB at a time (decision.md shared-resource caveat).
    - **Do NOT push this branch.** It stays local for the entire lifecycle.
 7. Move the todo file to `doing/` locally (no `git mv` — todos/ is gitignored):
    - Unix/bash: `mv todos/backlog/{file} todos/doing/{file}`
@@ -219,12 +226,15 @@ The feature branch is **local-only** and has never been pushed. Validation happe
    - If the push is rejected because the remote moved ahead, run `git pull --rebase origin {DEV_BRANCH}` and retry. If the rebase conflicts, stop and ask the user.
 
 8. **Delete the feature branch locally (it was never pushed, so there is no remote branch to delete):**
+   - If a **worktree** was used, remove it first (a branch checked out in a worktree can't be deleted): `git worktree remove ../{repo}-{NUMBER}-{kebab-case-short-desc}`. Run the merge/delete steps from the main repo dir.
    - `git branch -d {prefix}/{NUMBER}-{kebab-case-short-desc}`
    - If git refuses with "not fully merged" (shouldn't happen after step 6), stop and ask the user — do **not** use `-D` without explicit approval.
 
+   **Merging while another feature is in flight (parallel worktrees — decision.md "Merging TWO parallel features"):** order matters. After this todo (A) merges into `{DEV_BRANCH}`, pull `{DEV_BRANCH}` *into* the other in-flight branch (B) and resolve any conflicts inside B's own worktree, where you have full context — never dump them onto `{DEV_BRANCH}`. Then B merges back cleanly later via its own Phase 6.
+
 9. Report to the user:
     - `{DEV_BRANCH}` HEAD commit SHA and URL
-    - Confirmation that the local feature branch has been deleted
+    - Confirmation that the local feature branch (and worktree, if any) has been deleted
     - Reminder: "`todos/` stayed local; only the code merge is on the remote."
 
 ## Error Handling
@@ -239,3 +249,4 @@ If any phase fails, report the error clearly and ask the user how to proceed. Ne
 - **Feature branches are local-only.** The `{prefix}/{NUMBER}-...` branch is never pushed to the remote. It exists only to isolate changes until the user validates them, at which point Phase 6 merges it into `{DEV_BRANCH}` and deletes it with `git branch -d`.
 - **No pull requests.** The pipeline does not run `gh pr create`. Validation is a local test gate in Phase 6, and integration is a local `--no-ff` merge into `{DEV_BRANCH}`.
 - `git push` is **only** allowed for `{DEV_BRANCH}`, and **never** with `--force`.
+- **Branch vs worktree** is decided in Phase 0 pre-flight check 6 per the *Branches vs Worktrees* guide (`decision.md`). Default to branch only; use a worktree only when two things must be alive at once. Same-file or migration-number overlaps → sequential branches, not parallel worktrees. Conflicts mean both sides edited the same lines — read both, pick the right code, delete the `<<<<<<< ======= >>>>>>>` markers, then `git add` + `git commit`; `git merge --abort` is the escape hatch.

@@ -196,12 +196,24 @@ If a phase output can't be explained to a stakeholder in 30 seconds, it isn't re
 | Todo file | `{NNN}-{pN}-{kebab-desc}.md` | `029-p2-whatsapp-notifications.md` |
 | Priority doc | `{NNN}-priority-todos.md` | `000-priority-todos.md` |
 | Branch | `{prefix}/{NNN}-{kebab-desc}` | `feat/029-whatsapp-notifications` |
+| Worktree (when used) | `../{repo}-{NNN}-{kebab-desc}` | `../influencers-hub-029-whatsapp-notifications` |
 | Merge commit | `merge {prefix}: {PRIORITY}/{NNN} - {desc}` | `merge feat: P2/029 - WhatsApp notifications` |
+
+## Branches & Worktrees
+
+All four skills share one branching model, documented in full in the **[Branches vs Worktrees decision guide](../../decision.md)** (`decision.md` at the repo root). The short version:
+
+- **Branch always; worktree only when two things must be alive at once.** `/solve-todo` and `/bug-fix` default to a plain local feature branch. Reach for `git worktree` only when work must run *physically in parallel* — e.g., a hotfix that must not disturb a long-running feature, or two features whose dev servers you need running side by side.
+- **Same files = sequential; different modules = parallel.** Before running two items in parallel worktrees, check whether they touch the same shared files. If they do — or if both add **migration files** — sequence them instead. `/review-and-plan` and `/new-feature` encode these collisions as **dependencies** so `/solve-todo` doesn't parallelize colliding work.
+- **Always pause on migration-number collisions.** Two items adding the same `mig 0XX` break the boot-time migration runner; one must be renumbered.
+- **Merge branches, not folders.** For two parallel features: merge A into `{DEV_BRANCH}`, then pull `{DEV_BRANCH}` into B (resolving conflicts inside B's own worktree), then merge B back. When a worktree is used, `git worktree remove` it before deleting the branch.
+
+Where each skill plugs in: `/solve-todo` Phase 0 check 6 and Phase 6 (branch/worktree choice + parallel merge order); `/bug-fix` Phase 0 check 8 and Phase 7 (worktree-for-hotfix); `/review-and-plan` Phase 4 (conflict-aware ordering); `/new-feature` Phase 0 step 7 (capture conflicts as dependencies).
 
 ## Permissions (all skills)
 
 - **Freely allowed:** File reads, code search, tests, builds, lints, git read operations
-- **Requires approval:** File writes, git commits/push/checkout
+- **Requires approval:** File writes, git commits/push/checkout, `git worktree add`/`remove`
 
 ## Directory Structure
 

@@ -226,3 +226,7 @@ The custom skills in this repo (`/review-and-plan`, `/new-feature`, `/solve-todo
 | Strategy | Long-term roadmap | Dynamic pivot capability | Resilience |
 
 Full skill definitions and per-skill tripwires live in [`.claude/skills/`](./.claude/skills/) and [`custom-skills.md`](./custom-skills.md).
+
+### Branching model
+
+All four skills share a local-only branching model: **branch always, worktree only when two things must be alive at once.** How to decide what to create, how to avoid same-file and migration-number collisions, and how to merge parallel features back cleanly is documented in the [Branches vs Worktrees decision guide](./decision.md) (`decision.md`). The guide's repo-specific conflict hotspots are written for one project — adapt that section per repo when reusing these skills elsewhere.

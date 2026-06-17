@@ -66,8 +66,8 @@ Pipeline tripwire: if a phase output can't be explained to a stakeholder in 30 s
 2. **Architecture** — creates `todos/backlog/`, `todos/doing/`, `todos/done/`, `todos/priority/` if missing
 3. **Code Review** — runs `/ce:review` (multi-agent analysis), presents findings for your approval
 4. **Todo Generation** — creates one `.md` file per finding in `todos/backlog/`
-5. **Priority Document** — generates execution order + quick reference table in `todos/priority/`
-6. **Commit & Hand Off** — commits everything, offers to start `/solve-todo next`
+5. **Priority Document** — generates execution order + quick reference table in `todos/priority/`, ordered conflict-aware (items sharing files/migrations are sequenced via dependencies, not parallelized — see [`decision.md`](./decision.md))
+6. **Hand Off** — `todos/` is local-only (gitignored), so nothing is committed here; offers to start `/solve-todo next`
 
 **Output:** A fully populated `todos/` directory with prioritized, actionable backlog items ready for `/solve-todo`.
 
@@ -88,8 +88,8 @@ Pipeline tripwire: if a phase output can't be explained to a stakeholder in 30 s
 **Workflow:**
 1. **Pre-flight** — checks for uncommitted changes, validates `todos/` architecture exists (run `/review-and-plan` first), scans for overlapping existing items
 2. **Brainstorm** — runs `/ce:brainstorm` interactively with you to shape the idea into requirements; produces a doc in `docs/brainstorms/`
-3. **Structure** — creates a todo file in `todos/backlog/`, updates the priority document, creates a GitHub issue with `feature` label
-4. **Commit** — stages and commits all artifacts on the development branch (auto-detected or user-specified during pre-flight)
+3. **Structure** — creates a todo file in `todos/backlog/`, updates the priority document (capturing any same-file/migration overlap with in-flight work as a dependency so the two run sequentially, not in parallel worktrees)
+4. **Commit** — `todos/` is local-only and never committed; only the brainstorm doc (`docs/brainstorms/...`) is committed on the development branch (auto-detected or user-specified during pre-flight)
 5. **Hand Off** — offers to start `/solve-todo {NNN}` immediately
 
 **Exit path:** If the brainstorm concludes the idea shouldn't be built, it stops cleanly with no artifacts created.
@@ -107,7 +107,6 @@ Pipeline tripwire: if a phase output can't be explained to a stakeholder in 30 s
 **Usage:**
 ```
 /bug-fix PDF export crashes on orders with >100 line items
-/bug-fix #42                        # start from an existing GitHub issue
 /bug-fix                            # will ask for a description
 ```
 
@@ -118,14 +117,14 @@ Pipeline tripwire: if a phase output can't be explained to a stakeholder in 30 s
 4. Smallest possible diff — no drive-by refactors; adjacent issues get their own todos.
 
 **Workflow:**
-1. **Pre-flight** — working tree, dev branch, gitignore `todos/`, duplicate scan, create GitHub issue with `bug` label, create local-only `fix/{NNN}-...` branch, move todo to `doing/`
+1. **Pre-flight** — working tree, dev branch, gitignore `todos/`, duplicate scan, branch-vs-worktree decision (worktree only if a hotfix must run alongside an untouched long-running feature — see [`decision.md`](./decision.md)), create local-only `fix/{NNN}-...` branch, move todo to `doing/`
 2. **Reproduce** — write a failing regression test; pipeline halts if reproduction fails
 3. **Root Cause** — `/ce:brainstorm` narrowly focused on why the failing test fails
 4. **Plan** — `/ce:plan` with the smallest possible diff, including an explicit "will NOT change" list
 5. **Implement** — `/ce:work` makes the failing test pass; add edge-case tests
 6. **Review** — `/ce:review` focused on regression surface, edge cases, and scope creep
 7. **Documentation** — `/ce:compound` for non-trivial root causes (skipped for trivial bugs)
-8. **User Testing, Local Merge & Finalize** — mandatory manual test gate on the local branch, then `--no-ff` merge into `{DEV_BRANCH}`, push dev, delete the local `fix/` branch, close the issue
+8. **Validation, Local Merge & Finalize** — Claude-driven validation gate (user tests only visual changes or coverage gaps), then `--no-ff` merge into `{DEV_BRANCH}`, push dev, remove the worktree if one was used, delete the local `fix/` branch
 
 **Output:** A fix on `{DEV_BRANCH}` with a regression test that guarantees the bug cannot return silently.
 
@@ -144,13 +143,13 @@ Pipeline tripwire: if a phase output can't be explained to a stakeholder in 30 s
 ```
 
 **Workflow:**
-1. **Setup** — validates the todo exists, checks for existing branches/issues, detects the development branch, creates a GitHub issue, branches from the development branch, moves todo to `todos/doing/`
+1. **Setup** — validates the todo exists, checks for an existing branch, detects the development branch, makes the branch-vs-worktree decision (branch only by default; worktree only when work must run in parallel — see [`decision.md`](./decision.md)), branches from the development branch, moves todo to `todos/doing/`
 2. **Analysis** — reads linked brainstorm doc (if from `/new-feature`) or runs `/ce:ideate` + `/ce:brainstorm` to understand the problem
 3. **Plan** — runs `/ce:plan` to create a concrete implementation plan with specific files and test strategy
 4. **Implementation** — runs `/ce:work` to write the code changes
 5. **Review** — runs `/ce:review` to check for security, performance, quality issues (up to 3 fix iterations)
 6. **Documentation** — runs `/ce:compound` to document learnings (skipped for small items)
-7. **Finalize** — moves todo to `todos/done/`, pushes branch, creates PR targeting the development branch, closes the GitHub issue
+7. **Finalize** — Claude-driven validation gate, moves todo to `todos/done/`, `--no-ff` merges the feature branch into the development branch locally, pushes the development branch, removes the worktree if one was used, deletes the local feature branch (no PR — integration is a local merge)
 
 **Branch naming:** Automatically chosen based on the todo's nature:
 - `fix/` — security or bug fixes
@@ -192,9 +191,9 @@ Pipeline tripwire: if a phase output can't be explained to a stakeholder in 30 s
 |-----------|--------|---------|
 | Todo file | `{NNN}-{pN}-{kebab-desc}.md` | `029-p2-whatsapp-notifications.md` |
 | Priority doc | `{NNN}-priority-todos.md` | `000-priority-todos.md` |
-| GitHub issue | `{PRIORITY}/{NNN} - {desc}` | `P2/029 - WhatsApp notifications` |
 | Branch | `{prefix}/{NNN}-{kebab-desc}` | `feat/029-whatsapp-notifications` |
-| PR title | `{prefix}: {PRIORITY}/{NNN} - {desc}` | `feat: P2/029 - WhatsApp notifications` |
+| Worktree (when used) | `../{repo}-{NNN}-{kebab-desc}` | `../influencers-hub-029-whatsapp-notifications` |
+| Merge commit | `merge {prefix}: {PRIORITY}/{NNN} - {desc}` | `merge feat: P2/029 - WhatsApp notifications` |
 
 ## Directory Structure
 
@@ -210,7 +209,13 @@ docs/
   solutions/    # Knowledge docs from /ce:compound
 ```
 
+## Branching Model
+
+These skills are **local-only**: feature branches are never pushed, there are no PRs, and `todos/` is gitignored. Integration is a local `--no-ff` merge into the development branch, which is the only branch ever pushed.
+
+The choice of **branch only vs branch + worktree** — and how to keep parallel features from colliding on shared files or migration numbers — is documented in the [Branches vs Worktrees decision guide](./decision.md). The short version: **branch always, worktree only when two things must be alive at once; same files = sequential, different modules = parallel; always pause on migration-number collisions.** `/review-and-plan` and `/new-feature` encode conflicts as dependencies; `/solve-todo` and `/bug-fix` make the branch/worktree call and handle parallel merge order. The guide's conflict-hotspot section is repo-specific — adapt it per project.
+
 ## Permissions
 
 - **Freely allowed:** File reads, code search, tests, builds, lints, git read operations
-- **Requires approval:** File writes, git commits/push/checkout, GitHub issue/PR creation
+- **Requires approval:** File writes, git commits/checkout/merge, `git worktree add`/`remove`, pushing the development branch

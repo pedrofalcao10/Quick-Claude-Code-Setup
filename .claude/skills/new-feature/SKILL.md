@@ -76,6 +76,7 @@ If any phase output violates the mantra (too big, too vague, no clear user value
    - Report them: "These existing items look related: #{NNN} - {title}, #{NNN} - {title}"
    - Ask: "Continue with a new feature, or work on one of these existing items instead?"
    - If the user picks an existing item, invoke `/solve-todo {NUMBER}` and stop.
+   - **If a related item is currently in `todos/doing/`** (in flight) and this feature would touch the **same shared files** or **migration files**, flag it: the two cannot be safely worked in parallel worktrees and should be sequenced. Capture this as a dependency in Phase 2 so `/solve-todo` orders them correctly rather than colliding on merge (see the *Branches vs Worktrees* guide, `decision.md`).
 
 ### Phase 1 — Brainstorm
 
@@ -110,7 +111,7 @@ Convert the brainstorm output into project artifacts.
 Find the latest (highest-numbered) priority file in `todos/priority/`. Append the new feature entry to it — do NOT create a separate priority file.
 
 - **Recommended Execution Order:** If a `### New Features` section exists at the end of the file, add a row to its table. Otherwise, create a new `### New Features` section after the last existing section, with the standard table header and one row. Use `Order = max(existing Order across all tables) + 1`.
-- **Quick Reference:** Add a new row at the bottom with `Order = max(existing Order) + 1` and columns matching the existing schema. Set Dependencies to `None` unless the brainstorm identified prerequisites.
+- **Quick Reference:** Add a new row at the bottom with `Order = max(existing Order) + 1` and columns matching the existing schema. Set Dependencies to `None` unless the brainstorm identified prerequisites **or** the overlap scan (Phase 0 step 7) found an item touching the same shared files/migrations — in that case list the `#{NNN}` it conflicts with as a dependency so the two run sequentially instead of in parallel worktrees (decision.md "Decision 2").
 
 The appended entry in **Recommended Execution Order** should include:
 
@@ -173,6 +174,10 @@ Everything under `todos/` is **local-only** (gitignored per Phase 0 step 5). The
 2. Ask the user: **"Ready to start implementing? This will run `/solve-todo {NNN}`."**
    - If yes: invoke `/solve-todo {NNN}`
    - If no: report "Run `/solve-todo {NNN}` when ready." and stop.
+
+## Notes
+
+- `/new-feature` only creates the backlog item — no feature branch is created here. The **branch vs worktree** decision happens later in `/solve-todo` Phase 0 per the *Branches vs Worktrees* guide (`decision.md`). This skill's job toward that decision is to capture conflicts as dependencies (Phase 0 step 7 + Phase 2) so a feature that shares files or migrations with in-flight work is sequenced rather than run in a parallel worktree.
 
 ## Error Handling
 
